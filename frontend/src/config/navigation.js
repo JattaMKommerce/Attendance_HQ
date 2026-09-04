@@ -1,0 +1,144 @@
+import { 
+  LayoutDashboard, 
+  Users, 
+  Calendar, 
+  Umbrella,
+  DollarSign,
+  UserPlus,
+  Briefcase,
+  Target,
+  Gift,
+  Monitor,
+  Receipt,
+  FileText,
+  Bot,
+  Zap,
+  BarChart3,
+  Settings,
+  Building,
+  CreditCard,
+  Package,
+  Activity,
+  Shield,
+  History,
+  User,
+  Clock,
+  Bell,
+  ClipboardList,
+  CalendarDays,
+  CreditCard as IdCard,
+  MessageSquare,
+} from 'lucide-react';
+
+// ── Employee Portal Navigation ─────────────────────────────────────────────
+export const employeeNavigation = [
+  {
+    group: 'My Workspace',
+    items: [
+      { label: 'Dashboard',        path: '/app/employee/dashboard',    icon: LayoutDashboard, roles: ['EMPLOYEE'] },
+      { label: 'My Attendance',    path: '/app/employee/attendance',   icon: Clock,           roles: ['EMPLOYEE'] },
+      { label: 'My Shift & Roster',path: '/app/employee/roster',       icon: CalendarDays,    roles: ['EMPLOYEE'] },
+      { label: 'My Leave',         path: '/app/employee/leave',        icon: Umbrella,        roles: ['EMPLOYEE'] },
+      { label: 'Company Calendar', path: '/app/employee/calendar',     icon: Calendar,        roles: ['EMPLOYEE'] },
+    ],
+  },
+  {
+    group: 'My Information',
+    items: [
+      { label: 'My Profile',       path: '/app/employee/profile',      icon: User,            roles: ['EMPLOYEE'] },
+      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: DollarSign,      roles: ['EMPLOYEE'] },
+      { label: 'My Documents',     path: '/app/employee/documents',    icon: FileText,        roles: ['EMPLOYEE'] },
+      { label: 'My Requests',      path: '/app/employee/requests',     icon: ClipboardList,   roles: ['EMPLOYEE'] },
+    ],
+  },
+  {
+    group: 'People & Tools',
+    items: [
+      { label: 'Directory',        path: '/app/employee/directory',    icon: Users,           roles: ['EMPLOYEE'] },
+      { label: 'AI Assistant',     path: '/app/employee/ai',           icon: MessageSquare,   roles: ['EMPLOYEE'] },
+      { label: 'Notifications',    path: '/app/employee/notifications',icon: Bell,            roles: ['EMPLOYEE'] },
+      { label: 'Settings',         path: '/app/employee/settings',     icon: Settings,        roles: ['EMPLOYEE'] },
+    ],
+  },
+];
+
+export const organizationNavigation = [
+  {
+    group: 'Workspace',
+    items: [
+      { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Employees', path: '/app/employees', icon: Users, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Attendance', path: '/app/attendance', icon: Calendar, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Leave', path: '/app/leave', icon: Umbrella, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+    ]
+  },
+  {
+    group: 'Management',
+    items: [
+      { label: 'Payroll', path: '/app/payroll', icon: DollarSign, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Recruitment', path: '/app/recruitment', icon: UserPlus, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Onboarding', path: '/app/onboarding', icon: Briefcase, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Performance', path: '/app/performance', icon: Target, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
+      { label: 'Incentives', path: '/app/incentives', icon: Gift, roles: ['ORG_ADMIN', 'HR_ADMIN', 'PAYROLL_MANAGER'] },
+    ]
+  },
+  {
+    group: 'Operations',
+    items: [
+      { label: 'Assets', path: '/app/assets', icon: Monitor, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Expenses', path: '/app/expenses', icon: Receipt, roles: ['ORG_ADMIN', 'FINANCE', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Documents', path: '/app/documents', icon: FileText, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+    ]
+  },
+  {
+    group: 'Intelligence',
+    items: [
+      { label: 'AI Assistant', path: '/app/ai', icon: Bot, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
+      { label: 'Automation', path: '/app/automation', icon: Zap, roles: ['ORG_ADMIN'] },
+      { label: 'Reports', path: '/app/reports', icon: BarChart3, roles: ['ORG_ADMIN', 'HR_ADMIN', 'FINANCE'] },
+    ]
+  },
+  {
+    group: 'System',
+    items: [
+      { label: 'Settings', path: '/app/settings', icon: Settings, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+    ]
+  }
+];
+
+export const platformNavigation = [
+  {
+    group: 'Platform',
+    items: [
+      { label: 'Overview', path: '/platform/dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN'] },
+      { label: 'Organizations', path: '/platform/organizations', icon: Building, roles: ['SUPER_ADMIN'] },
+      { label: 'Subscriptions', path: '/platform/subscriptions', icon: CreditCard, roles: ['SUPER_ADMIN'] },
+      { label: 'Payments', path: '/platform/payments', icon: DollarSign, roles: ['SUPER_ADMIN'] },
+      { label: 'Plans', path: '/platform/plans', icon: Package, roles: ['SUPER_ADMIN'] },
+    ]
+  },
+  {
+    group: 'Operations',
+    items: [
+      { label: 'Feature Management', path: '/platform/features', icon: Shield, roles: ['SUPER_ADMIN'] },
+      { label: 'AI Usage', path: '/platform/ai-usage', icon: Bot, roles: ['SUPER_ADMIN'] },
+      { label: 'System Health', path: '/platform/health', icon: Activity, roles: ['SUPER_ADMIN'] },
+      { label: 'Audit Logs', path: '/platform/audit', icon: History, roles: ['SUPER_ADMIN'] },
+    ]
+  },
+  {
+    group: 'System',
+    items: [
+      { label: 'Settings', path: '/platform/settings', icon: Settings, roles: ['SUPER_ADMIN'] },
+    ]
+  }
+];
+
+export const filterNavigationByRole = (navigationMap, userRoles) => {
+  return navigationMap.map(group => {
+    const filteredItems = group.items.filter(item => 
+      item.roles.some(role => userRoles.includes(role))
+    );
+    return { ...group, items: filteredItems };
+  }).filter(group => group.items.length > 0);
+};

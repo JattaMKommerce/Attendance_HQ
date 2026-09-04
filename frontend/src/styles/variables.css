@@ -1,0 +1,117 @@
+:root {
+  /* Colors */
+  --bg-app: #fff8fa;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #fff1f5;
+  --bg-surface-active: #fae1e9;
+  
+  --bg-sidebar: #ffffff;
+  --bg-sidebar-hover: #fff8fa;
+  --bg-sidebar-active: #fff1f5;
+
+  --border: #f0dce3;
+  --border-subtle: #f8eef1;
+  --border-focus: #e9a0b4;
+
+  --text-primary: #1d1b1e;
+  --text-secondary: #777078;
+  --text-muted: #a09ba1;
+  --text-inverse: #ffffff;
+
+  /* Brand / Accents */
+  --accent: #e9a0b4;
+  --accent-hover: #d88096;
+  --accent-soft: #f8dce5;
+
+  /* Status Colors */
+  --success: #81c784;
+  --success-bg: #e8f5e9;
+  --success-text: #2e7d32;
+  
+  --warning: #ffb74d;
+  --warning-bg: #fff3e0;
+  --warning-text: #e65100;
+  
+  --danger: #e57373;
+  --danger-bg: #ffebee;
+  --danger-text: #c62828;
+  
+  --info: #64b5f6;
+  --info-bg: #e3f2fd;
+  --info-text: #1565c0;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(50, 30, 40, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(50, 30, 40, 0.06), 0 2px 4px -1px rgba(50, 30, 40, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(50, 30, 40, 0.08), 0 4px 6px -2px rgba(50, 30, 40, 0.04);
+  
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 60px;
+  --content-max-width: 1200px;
+  
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  
+  /* 3D Depth Utilities for future */
+  --transform-hover-subtle: translateY(-2px);
+  --transform-hover-active: translateY(0);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--accent-hover);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Base Form Resets */
+input, button, textarea, select {
+  font-family: inherit;
+}

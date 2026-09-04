@@ -1,0 +1,432 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Employee Portal – scoped styles
+   All rules are prefixed .ep- to avoid collisions with admin styles.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Page layout ─────────────────────────────────────────────────────────── */
+.ep-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ep-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+
+.ep-page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.ep-page-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.ep-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Tab navigation ──────────────────────────────────────────────────────── */
+.ep-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ep-tabs::-webkit-scrollbar { display: none; }
+
+.ep-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.ep-tab:hover { color: var(--text-primary); }
+.ep-tab.active {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+  font-weight: 600;
+}
+
+/* ── Status badges ───────────────────────────────────────────────────────── */
+.ep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ep-badge-success  { background: var(--success-bg);  color: var(--success-text); }
+.ep-badge-warning  { background: var(--warning-bg);  color: var(--warning-text); }
+.ep-badge-danger   { background: var(--danger-bg);   color: var(--danger-text);  }
+.ep-badge-info     { background: var(--info-bg);     color: var(--info-text);    }
+.ep-badge-neutral  { background: var(--bg-surface-hover); color: var(--text-secondary); }
+.ep-badge-accent   { background: var(--accent-soft); color: var(--accent-hover); }
+
+/* ── Stat cards ──────────────────────────────────────────────────────────── */
+.ep-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ep-stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: default;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.ep-stat-card.clickable { cursor: pointer; }
+.ep-stat-card.clickable:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.ep-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ep-stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 4px 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ep-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  line-height: 1;
+}
+.ep-stat-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.ep-progress {
+  height: 6px;
+  background: var(--bg-surface-hover);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.ep-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* ── Two-column layout ───────────────────────────────────────────────────── */
+.ep-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .ep-two-col { grid-template-columns: 1fr; }
+}
+
+/* ── Info row (label + value) ────────────────────────────────────────────── */
+.ep-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ep-info-row:last-child { border-bottom: none; }
+.ep-info-icon { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+.ep-info-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.ep-info-value { font-size: 14px; font-weight: 500; }
+
+/* ── Form fields ─────────────────────────────────────────────────────────── */
+.ep-field { margin-bottom: 18px; }
+.ep-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ep-required { color: var(--danger); margin-left: 2px; }
+
+/* ── Modal backdrop ──────────────────────────────────────────────────────── */
+.ep-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+.ep-modal {
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.ep-modal-lg { max-width: 780px; }
+.ep-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 0;
+}
+.ep-modal-title { font-size: 18px; font-weight: 600; margin: 0; }
+.ep-modal-body  { padding: 20px 24px 24px; }
+
+/* ── Alert banners ───────────────────────────────────────────────────────── */
+.ep-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.ep-alert-success { background: var(--success-bg); color: var(--success-text); }
+.ep-alert-danger  { background: var(--danger-bg);  color: var(--danger-text);  }
+.ep-alert-info    { background: var(--info-bg);    color: var(--info-text);    }
+.ep-alert-warning { background: var(--warning-bg); color: var(--warning-text); }
+
+/* ── Calendar grid ───────────────────────────────────────────────────────── */
+.ep-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.ep-cal-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ep-cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  cursor: default;
+  position: relative;
+  transition: background 0.15s;
+  min-height: 40px;
+}
+.ep-cal-day.interactive { cursor: pointer; }
+.ep-cal-day.interactive:hover { background: var(--bg-surface-hover); }
+.ep-cal-day.today {
+  border: 2px solid var(--accent-hover);
+  font-weight: 700;
+}
+.ep-cal-day.other-month { opacity: 0.3; }
+.ep-cal-day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 5px;
+}
+
+/* Status colors for calendar days */
+.ep-cal-present  { background: var(--success-bg); color: var(--success-text); }
+.ep-cal-absent   { background: var(--danger-bg);  color: var(--danger-text);  }
+.ep-cal-leave    { background: var(--info-bg);    color: var(--info-text);    }
+.ep-cal-holiday  { background: var(--accent-soft);color: var(--accent-hover); }
+.ep-cal-weekend  { background: var(--bg-surface-hover); color: var(--text-muted); }
+.ep-cal-late     { background: var(--warning-bg); color: var(--warning-text); }
+.ep-cal-half     { background: #fff7ed; color: #c2410c; }
+
+/* ── Roster cell ─────────────────────────────────────────────────────────── */
+.ep-roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ep-roster-table th {
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.ep-roster-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: center;
+  vertical-align: middle;
+}
+.ep-roster-cell {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+.ep-roster-shift   { background: var(--accent-soft); color: var(--accent-hover); }
+.ep-roster-off     { background: var(--bg-surface-hover); color: var(--text-muted); }
+.ep-roster-holiday { background: var(--success-bg); color: var(--success-text); }
+
+/* ── Notification item ───────────────────────────────────────────────────── */
+.ep-notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ep-notif-item:hover { background: var(--bg-surface-hover); }
+.ep-notif-item.unread { background: var(--bg-surface-hover); }
+.ep-notif-item.unread .ep-notif-title { font-weight: 600; }
+.ep-notif-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ep-notif-title  { font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
+.ep-notif-body   { font-size: 13px; color: var(--text-secondary); }
+.ep-notif-time   { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ── Request card ────────────────────────────────────────────────────────── */
+.ep-request-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  background: var(--bg-surface);
+  transition: box-shadow 0.15s;
+}
+.ep-request-card:hover { box-shadow: var(--shadow-sm); }
+
+/* ── AI assistant ────────────────────────────────────────────────────────── */
+.ep-ai-bubble {
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  max-width: 80%;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ep-ai-bubble.user {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+.ep-ai-bubble.assistant {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+.ep-ai-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ep-ai-suggestion:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.ep-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.ep-empty-icon { color: var(--text-muted); margin-bottom: 16px; }
+.ep-empty-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 6px; }
+.ep-empty-desc  { font-size: 14px; margin: 0; max-width: 360px; }
+
+/* ── Responsive overrides ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ep-page-header { flex-direction: column; align-items: flex-start; }
+  .ep-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .ep-modal-lg { max-width: 100%; }
+  .ep-cal-day { font-size: 11px; min-height: 32px; }
+}
+@media (max-width: 480px) {
+  .ep-stat-grid { grid-template-columns: 1fr; }
+  .ep-cal-header, .ep-cal-day { font-size: 10px; }
+}

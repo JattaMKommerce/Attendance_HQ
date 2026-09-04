@@ -1,0 +1,22 @@
+{
+  "name": "hrms",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:check": "node scripts/check-db.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev -- --open",
+    "dev": "npm run db:up && npm run db:check && concurrently -k -p \"[{name}]\" -n \"backend,frontend\" -c \"cyan,magenta\" \"npm run dev:backend\" \"wait-on tcp:localhost:5001 -t 30000 && npm run dev:frontend\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.4",
+    "mysql2": "^3.24.3",
+    "wait-on": "^9.1.0"
+  }
+}
