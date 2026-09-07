@@ -32,6 +32,17 @@ class AttendanceController {
     }
   }
 
+  async getEmployeeHistory(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { year, month } = req.query;
+      const result = await attendanceService.getEmployeeAttendanceHistory(req.user.organization_id, id, year, month);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async addManualRecord(req, res, next) {
     try {
       const result = await attendanceService.addManualRecord(req.user.organization_id, req.body);

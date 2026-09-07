@@ -67,7 +67,7 @@ export const organizationNavigation = [
     group: 'Workspace',
     items: [
       { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'Employees', path: '/app/employees', icon: Users, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Onboarding', path: '/app/employees', icon: Users, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { label: 'Attendance', path: '/app/attendance', icon: Calendar, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { label: 'Leave', path: '/app/leave', icon: Umbrella, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
     ]
@@ -76,32 +76,15 @@ export const organizationNavigation = [
     group: 'Management',
     items: [
       { label: 'Payroll', path: '/app/payroll', icon: DollarSign, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'Recruitment', path: '/app/recruitment', icon: UserPlus, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
-      { label: 'Onboarding', path: '/app/onboarding', icon: Briefcase, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
       { label: 'Performance', path: '/app/performance', icon: Target, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
       { label: 'Incentives', path: '/app/incentives', icon: Gift, roles: ['ORG_ADMIN', 'HR_ADMIN', 'PAYROLL_MANAGER'] },
+      { label: 'Recruitment', path: '/app/recruitment', icon: UserPlus, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
     ]
   },
   {
     group: 'Operations',
     items: [
-      { label: 'Assets', path: '/app/assets', icon: Monitor, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
-      { label: 'Expenses', path: '/app/expenses', icon: Receipt, roles: ['ORG_ADMIN', 'FINANCE', 'MANAGER', 'EMPLOYEE'] },
-      { label: 'Documents', path: '/app/documents', icon: FileText, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
-    ]
-  },
-  {
-    group: 'Intelligence',
-    items: [
-      { label: 'AI Assistant', path: '/app/ai', icon: Bot, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
-      { label: 'Automation', path: '/app/automation', icon: Zap, roles: ['ORG_ADMIN'] },
-      { label: 'Reports', path: '/app/reports', icon: BarChart3, roles: ['ORG_ADMIN', 'HR_ADMIN', 'FINANCE'] },
-    ]
-  },
-  {
-    group: 'System',
-    items: [
-      { label: 'Settings', path: '/app/settings', icon: Settings, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Assets DB', path: '/app/assets', icon: Monitor, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
     ]
   }
 ];

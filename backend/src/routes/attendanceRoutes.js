@@ -11,15 +11,16 @@ router.get('/overview', authorizePermission('attendance.view'), attendanceContro
 
 // Records
 router.get('/records', authorizePermission('attendance.view'), attendanceController.getRecords);
-router.post('/records/manual', authorizePermission('attendance.create'), attendanceController.addManualRecord);
+router.post('/records/manual', authorizePermission('attendance.manage'), attendanceController.addManualRecord);
+router.get('/employee/:id/history', authorizePermission('attendance.view'), attendanceController.getEmployeeHistory);
 
 // Regularization
 router.get('/regularization', authorizePermission('attendance.view'), attendanceController.getRegularizationRequests);
-router.post('/regularization', authorizePermission('attendance.create'), attendanceController.createRegularizationRequest);
-router.patch('/regularization/:id', authorizePermission('attendance.approve'), attendanceController.updateRegularizationRequest);
+router.post('/regularization', authorizePermission('attendance.manage'), attendanceController.createRegularizationRequest);
+router.patch('/regularization/:id', authorizePermission('attendance.manage'), attendanceController.updateRegularizationRequest);
 
 // Shifts
 router.get('/shifts', authorizePermission('attendance.view'), attendanceController.getShifts);
-router.post('/shifts', authorizePermission('attendance.manage_shifts'), attendanceController.createShift);
+router.post('/shifts', authorizePermission('attendance.manage'), attendanceController.createShift);
 
 module.exports = router;

@@ -7,6 +7,7 @@ export const attendanceApi = {
   // Records
   getRecords: (filters) => api.get('/attendance/records', { params: filters }),
   addManualRecord: (data) => api.post('/attendance/records/manual', data),
+  getEmployeeHistory: (employeeId, params) => api.get(`/attendance/employee/${employeeId}/history`, { params }),
   
   // Regularization
   getRegularizationRequests: (filters) => api.get('/attendance/regularization', { params: filters }),

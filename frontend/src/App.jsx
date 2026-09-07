@@ -16,7 +16,6 @@ import EmployeeProfile from './pages/employees/EmployeeProfile';
 
 import Attendance from './pages/attendance/Attendance';
 import Leave from './pages/leave/Leave';
-import Payroll from './payroll/Payroll';
 
 // Employee Portal
 import { 
@@ -30,6 +29,21 @@ import {
   EmployeeDirectory,
   MySettings
 } from './pages/employee';
+
+// Management Modules
+import ManagementDashboard from './pages/management/dashboard/Dashboard';
+import Recruitment from './pages/management/recruitment/Recruitment';
+import Onboarding from './pages/management/onboarding/Onboarding';
+import Performance from './pages/management/performance/Performance';
+
+// Payroll V2
+import PayrollLayout from './pages/payroll/PayrollLayout';
+import PayrollOverview from './pages/payroll/PayrollOverview';
+import PayrollRuns from './pages/payroll/PayrollRuns';
+import EmployeePayroll from './pages/payroll/EmployeePayroll';
+import SalaryStructures from './pages/payroll/SalaryStructures';
+import Adjustments from './pages/payroll/Adjustments';
+import PayrollSettings from './pages/payroll/PayrollSettings';
 
 // Placeholders
 import Placeholder from './pages/placeholders/Placeholder';
@@ -49,9 +63,6 @@ const mapPlaceholderRoutes = (routes, base) => {
 };
 
 const appPlaceholders = [
-  { path: 'recruitment', title: 'Recruitment' },
-  { path: 'onboarding', title: 'Onboarding' },
-  { path: 'performance', title: 'Performance' },
   { path: 'incentives', title: 'Incentives' },
   { path: 'assets', title: 'Assets' },
   { path: 'expenses', title: 'Expenses' },
@@ -117,7 +128,20 @@ const AppRoutes = () => {
           <Route path="employees/:id" element={<EmployeeProfile />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="leave" element={<Leave />} />
-          <Route path="payroll" element={<Payroll />} />
+          {/* Payroll V2 */}
+          <Route path="payroll" element={<PayrollLayout />}>
+            <Route index element={<PayrollOverview />} />
+            <Route path="overview" element={<PayrollOverview />} />
+            <Route path="runs" element={<PayrollRuns />} />
+            <Route path="employees" element={<EmployeePayroll />} />
+            <Route path="structures" element={<SalaryStructures />} />
+            <Route path="adjustments" element={<Adjustments />} />
+            <Route path="settings" element={<PayrollSettings />} />
+          </Route>
+          <Route path="management" element={<ManagementDashboard />} />
+          <Route path="recruitment" element={<Recruitment />} />
+          <Route path="onboarding" element={<Onboarding />} />
+          <Route path="performance" element={<Performance />} />
           
           {/* Employee Portal Routes */}
           <Route path="employee/dashboard" element={<EmployeeDashboard />} />

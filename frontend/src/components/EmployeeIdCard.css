@@ -1,0 +1,203 @@
+.id-card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.id-card {
+  width: 260px;
+  min-height: 420px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Background Waves (Simulated with pseudo-elements/border-radius) */
+.id-card-bg-wave-top {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle at top right, #fff1f2 0%, #ffe4e6 50%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.id-card-bg-wave-bottom {
+  position: absolute;
+  bottom: -40px;
+  left: -20px;
+  width: 100%;
+  height: 80px;
+  background: radial-gradient(ellipse at bottom left, #fb7185 0%, #fda4af 40%, transparent 70%);
+  z-index: 0;
+  opacity: 0.8;
+}
+
+/* Header */
+.id-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 10px;
+  z-index: 1;
+}
+
+.id-card-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.id-card-company {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.company-tagline {
+  font-size: 9px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Profile Picture */
+.id-card-avatar-container {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 16px;
+  z-index: 1;
+}
+
+.id-card-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #f1f5f9;
+}
+
+.id-card-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Name & Designation */
+.id-card-employee-info {
+  text-align: center;
+  z-index: 1;
+  margin-bottom: 12px;
+}
+
+.employee-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.employee-designation {
+  font-size: 11px;
+  color: #475569;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* QR Code */
+.id-card-qr-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  z-index: 1;
+}
+
+.id-card-qr-container svg {
+  background: white;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+/* Details Grid */
+.id-card-details {
+  padding: 0 24px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+}
+
+.detail-label {
+  width: 85px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.detail-separator {
+  width: 15px;
+  color: #94a3b8;
+}
+
+.detail-value {
+  color: #0f172a;
+  font-weight: 700;
+  flex: 1;
+}
+
+/* Signature */
+.id-card-signature-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0 24px 16px;
+  z-index: 1;
+}
+
+.signature-line {
+  border-bottom: 1px solid #cbd5e1;
+  width: 90px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.signature-svg {
+  width: 80px;
+  height: 24px;
+  margin-bottom: -4px;
+}
+
+.signature-label {
+  font-size: 8px;
+  color: #64748b;
+  margin: 0;
+  width: 90px;
+  text-align: center;
+}

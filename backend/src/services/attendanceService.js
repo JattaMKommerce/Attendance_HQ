@@ -1,99 +1,116 @@
 const db = require('../config/db');
 
 class AttendanceService {
-  // --- Overview ---
-  async getOverview(organizationId, date, filters = {}) {
-    let empQuery = 'SELECT COUNT(id) as total FROM employees WHERE organization_id = ? AND status = "active"';
-    let empParams = [organizationId];
+  _buildEmployeeFilters(filters, alias = '') {
+    let query = '';
+    let params = [];
+    const prefix = alias ? `${alias}.` : '';
 
     if (filters.department) {
-      empQuery += ' AND department_id = ?';
-      empParams.push(filters.department);
+      query += ` AND ${prefix}department_id = ?`;
+      params.push(filters.department);
     }
     if (filters.search) {
-      empQuery += ' AND (first_name LIKE ? OR last_name LIKE ? OR employee_code LIKE ?)';
-      empParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      const searchStr = `%${filters.search}%`;
+      query += ` AND (${prefix}first_name LIKE ? OR ${prefix}last_name LIKE ? OR ${prefix}employee_code LIKE ?)`;
+      params.push(searchStr, searchStr, searchStr);
+    }
+    if (filters.shift) {
+      query += ` AND ws.shift_id = ?`;
+      params.push(filters.shift);
+    }
+    return { query, params };
+  }
+
+  // --- Overview ---
+  async getOverview(organizationId, date, filters = {}) {
+    const aliasFilter = this._buildEmployeeFilters(filters, 'e');
+
+    let wsJoin = '';
+    let wsParams = [];
+    if (filters.shift) {
+      wsJoin = ' JOIN work_schedules ws ON e.id = ws.employee_id AND ? >= ws.effective_from AND (ws.effective_to IS NULL OR ? <= ws.effective_to)';
+      wsParams = [date, date];
     }
 
     // Total Employees
-    const [employees] = await db.execute(empQuery, empParams);
+    const [employees] = await db.execute(
+      `SELECT COUNT(e.id) as total FROM employees e${wsJoin} WHERE e.organization_id = ? AND e.status = "active"${aliasFilter.query}`, 
+      [...wsParams, organizationId, ...aliasFilter.params]
+    );
+    const totalEmployees = employees[0].total;
 
-    let attQuery = `SELECT a.status, COUNT(*) as count 
+    // Get all attendance records for the date to compute present/late
+    const [attendanceRows] = await db.execute(
+      `SELECT a.status, a.check_in_time, e.id as emp_id
        FROM attendance_records a
        JOIN employees e ON a.employee_id = e.id
-       WHERE a.organization_id = ? AND a.date = ?`;
-    let attParams = [organizationId, date];
-
-    if (filters.department) {
-      attQuery += ' AND e.department_id = ?';
-      attParams.push(filters.department);
-    }
-    if (filters.search) {
-      attQuery += ' AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.employee_code LIKE ?)';
-      attParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-    }
-    // Shift filter conceptually goes here if we check assignments, but keep simple for now
-    attQuery += ' GROUP BY a.status';
-
-    // Attendance stats for date
-    const [attendance] = await db.execute(attQuery, attParams);
-
-    // Missing punches (Check in exists, check out missing)
-    let missingQuery = `SELECT COUNT(*) as total 
-       FROM attendance_records a
-       JOIN employees e ON a.employee_id = e.id
-       WHERE a.organization_id = ? AND a.date = ? AND a.check_in_time IS NOT NULL AND a.check_out_time IS NULL`;
-    let missingParams = [organizationId, date];
-    
-    if (filters.department) {
-      missingQuery += ' AND e.department_id = ?';
-      missingParams.push(filters.department);
-    }
-    if (filters.search) {
-      missingQuery += ' AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.employee_code LIKE ?)';
-      missingParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-    }
-
-    const [missingPunches] = await db.execute(missingQuery, missingParams);
-
-    // Pending Requests
-    let reqQuery = `SELECT COUNT(*) as total 
-       FROM attendance_regularization r
-       JOIN employees e ON r.employee_id = e.id
-       WHERE r.organization_id = ? AND r.status = "pending"`;
-    let reqParams = [organizationId];
-
-    if (filters.department) {
-      reqQuery += ' AND e.department_id = ?';
-      reqParams.push(filters.department);
-    }
-    if (filters.search) {
-      reqQuery += ' AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.employee_code LIKE ?)';
-      reqParams.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-    }
-
-    const [pendingRequests] = await db.execute(reqQuery, reqParams);
+       ${wsJoin}
+       WHERE a.organization_id = ? AND a.date = ?${aliasFilter.query}`,
+      [...wsParams, organizationId, date, ...aliasFilter.params]
+    );
 
     let present = 0;
-    let absent = 0;
     let late = 0;
     let onLeave = 0;
+    let absentFromRecords = 0;
 
-    attendance.forEach(row => {
-      if (row.status === 'present') present += row.count;
-      else if (row.status === 'absent') absent += row.count;
-      else if (row.status === 'late') {
-        present += row.count;
-        late += row.count;
+    const attendedEmpIds = new Set();
+
+    attendanceRows.forEach(row => {
+      attendedEmpIds.add(row.emp_id);
+      if (row.status === 'leave') onLeave++;
+      else if (row.status === 'absent') absentFromRecords++;
+      else {
+        present++;
+        // Strict Late logic: check-in > 09:35 AM
+        if (row.check_in_time) {
+          const [hours, minutes] = row.check_in_time.split(':').map(Number);
+          if (hours > 9 || (hours === 9 && minutes > 35)) late++;
+        } else if (row.status === 'late') {
+          late++;
+        }
       }
-      else if (row.status === 'leave') onLeave += row.count;
-      else if (row.status === 'half_day') present += row.count;
     });
 
+    const dateObj = new Date(date);
+    const today = new Date();
+    let calculatedAbsent = absentFromRecords;
+    
+    // Calculate implicit absents if past date or past cutoff (e.g. 18:00) today
+    if (dateObj < new Date(today.toDateString()) || (dateObj.toDateString() === today.toDateString() && today.getHours() >= 18)) {
+       calculatedAbsent += Math.max(0, totalEmployees - (present + onLeave + absentFromRecords));
+    }
+
+    // Missing punches (Check in exists, check out missing)
+    const [missingPunches] = await db.execute(
+      `SELECT COUNT(*) as total FROM attendance_records a
+       JOIN employees e ON a.employee_id = e.id
+       ${wsJoin}
+       WHERE a.organization_id = ? AND a.date = ? AND a.check_in_time IS NOT NULL AND a.check_out_time IS NULL${aliasFilter.query}`,
+      [...wsParams, organizationId, date, ...aliasFilter.params]
+    );
+
+    // Pending Requests
+    // Note: Regularization doesn't necessarily have a date, it has attendance_date. We'll join ws based on attendance_date.
+    let reqWsJoin = '';
+    let reqWsParams = [];
+    if (filters.shift) {
+      reqWsJoin = ' JOIN work_schedules ws ON e.id = ws.employee_id AND r.attendance_date >= ws.effective_from AND (ws.effective_to IS NULL OR r.attendance_date <= ws.effective_to)';
+    }
+
+    const [pendingRequests] = await db.execute(
+      `SELECT COUNT(*) as total FROM attendance_regularization r
+       JOIN employees e ON r.employee_id = e.id
+       ${reqWsJoin}
+       WHERE r.organization_id = ? AND r.status = "pending"${aliasFilter.query}`,
+      [...reqWsParams, organizationId, ...aliasFilter.params]
+    );
+
     return {
-      totalEmployees: employees[0].total,
+      totalEmployees,
       present,
-      absent,
+      absent: calculatedAbsent,
       late,
       onLeave,
       missingPunches: missingPunches[0].total,
@@ -103,84 +120,156 @@ class AttendanceService {
 
   // --- Records ---
   async getRecords(organizationId, filters = {}) {
+    const aliasFilter = this._buildEmployeeFilters(filters, 'e');
+    const targetDate = filters.date || new Date().toISOString().split('T')[0];
+    
     let query = `
-      SELECT a.*, e.first_name, e.last_name, e.employee_code, d.name as department_name, s.name as shift_name
-      FROM attendance_records a
-      JOIN employees e ON a.employee_id = e.id
+      SELECT 
+        e.id as employee_id, e.first_name, e.last_name, e.employee_code, e.status as employee_status,
+        d.name as department_name, s.name as shift_name,
+        a.id as record_id, a.date, a.status as record_status, a.check_in_time, a.check_out_time,
+        a.work_duration_minutes, a.late_minutes, a.overtime_minutes
+      FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
-      LEFT JOIN work_schedules ws ON e.id = ws.employee_id AND a.date >= ws.effective_from AND (ws.effective_to IS NULL OR a.date <= ws.effective_to)
+      LEFT JOIN work_schedules ws ON e.id = ws.employee_id AND ? >= ws.effective_from AND (ws.effective_to IS NULL OR ? <= ws.effective_to)
       LEFT JOIN shifts s ON ws.shift_id = s.id
-      WHERE a.organization_id = ?
+      LEFT JOIN attendance_records a ON e.id = a.employee_id AND a.date = ?
+      WHERE e.organization_id = ? AND e.status = 'active'${aliasFilter.query}
+      ORDER BY e.first_name ASC
     `;
-    const queryParams = [organizationId];
-
-    if (filters.date) {
-      query += ` AND a.date = ?`;
-      queryParams.push(filters.date);
-    }
-    if (filters.startDate && filters.endDate) {
-      query += ` AND a.date BETWEEN ? AND ?`;
-      queryParams.push(filters.startDate, filters.endDate);
-    }
-    if (filters.departmentId) {
-      query += ` AND e.department_id = ?`;
-      queryParams.push(filters.departmentId);
-    }
-    if (filters.status) {
-      query += ` AND a.status = ?`;
-      queryParams.push(filters.status);
-    }
-    if (filters.search) {
-      query += ` AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.employee_code LIKE ?)`;
-      const searchStr = `%${filters.search}%`;
-      queryParams.push(searchStr, searchStr, searchStr);
-    }
-
-    query += ` ORDER BY a.date DESC, e.first_name ASC`;
-
-    if (filters.limit && filters.offset !== undefined) {
-      query += ` LIMIT ? OFFSET ?`;
-      queryParams.push(parseInt(filters.limit), parseInt(filters.offset));
-    }
+    const queryParams = [targetDate, targetDate, targetDate, organizationId, ...aliasFilter.params];
 
     const [rows] = await db.execute(query, queryParams);
+    
+    let finalRecords = rows.map(r => {
+      let currentStatus = r.record_status || 'absent';
+      
+      // Strict late logic for table
+      if (currentStatus === 'present' || currentStatus === 'half_day') {
+        if (r.check_in_time) {
+          const timeParts = r.check_in_time.split(':');
+          if (timeParts.length >= 2) {
+            const hours = parseInt(timeParts[0], 10);
+            const minutes = parseInt(timeParts[1], 10);
+            if (hours > 9 || (hours === 9 && minutes > 35)) {
+              currentStatus = 'late';
+            }
+          }
+        }
+      }
+      
+      // Strict absent logic: if it's today and before cutoff, they aren't "absent" yet, just "not punched in"
+      const dateObj = new Date(targetDate);
+      const today = new Date();
+      const isPastDate = dateObj < new Date(today.toDateString());
+      const isPastCutoff = today.getHours() >= 18;
+      
+      if (!r.record_id && currentStatus === 'absent') {
+        if (!isPastDate && !(dateObj.toDateString() === today.toDateString() && isPastCutoff)) {
+          currentStatus = 'not_marked'; 
+        }
+      }
 
-    let countQuery = `
-      SELECT COUNT(*) as total
-      FROM attendance_records a
-      JOIN employees e ON a.employee_id = e.id
-      WHERE a.organization_id = ?
-    `;
-    const countParams = [organizationId];
+      return {
+        id: r.record_id,
+        employee_id: r.employee_id,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        employee_code: r.employee_code,
+        department_name: r.department_name,
+        shift_name: r.shift_name || 'General (9 AM - 6 PM)',
+        date: r.date || targetDate,
+        status: currentStatus,
+        check_in_time: r.check_in_time,
+        check_out_time: r.check_out_time,
+        work_duration_minutes: r.work_duration_minutes,
+        late_minutes: r.late_minutes,
+        overtime_minutes: r.overtime_minutes
+      };
+    });
 
-    if (filters.date) {
-      countQuery += ` AND a.date = ?`;
-      countParams.push(filters.date);
-    }
-    if (filters.startDate && filters.endDate) {
-      countQuery += ` AND a.date BETWEEN ? AND ?`;
-      countParams.push(filters.startDate, filters.endDate);
-    }
-    if (filters.departmentId) {
-      countQuery += ` AND e.department_id = ?`;
-      countParams.push(filters.departmentId);
-    }
-    if (filters.status) {
-      countQuery += ` AND a.status = ?`;
-      countParams.push(filters.status);
-    }
-    if (filters.search) {
-      countQuery += ` AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.employee_code LIKE ?)`;
-      const searchStr = `%${filters.search}%`;
-      countParams.push(searchStr, searchStr, searchStr);
+    // Apply status filter post-processing since we compute strict status in JS
+    if (filters.status && filters.status !== 'all') {
+      if (filters.status === 'present') {
+        finalRecords = finalRecords.filter(r => r.status === 'present' || r.status === 'late' || r.status === 'half_day');
+      } else {
+        finalRecords = finalRecords.filter(r => r.status === filters.status);
+      }
     }
 
-    const [countRows] = await db.execute(countQuery, countParams);
+    const total = finalRecords.length;
+
+    if (filters.limit && filters.offset !== undefined) {
+      const offset = parseInt(filters.offset);
+      const limit = parseInt(filters.limit);
+      finalRecords = finalRecords.slice(offset, offset + limit);
+    }
 
     return {
-      records: rows,
-      total: countRows[0].total
+      records: finalRecords,
+      total: total
     };
+  }
+
+  async getEmployeeAttendanceHistory(organizationId, employeeId, year, month) {
+    const query = `
+      SELECT 
+        a.id as record_id, a.date, a.status as record_status, a.check_in_time, a.check_out_time,
+        a.work_duration_minutes, a.late_minutes, a.overtime_minutes,
+        s.name as shift_name
+      FROM attendance_records a
+      LEFT JOIN work_schedules ws ON a.employee_id = ws.employee_id AND a.date >= ws.effective_from AND (ws.effective_to IS NULL OR a.date <= ws.effective_to)
+      LEFT JOIN shifts s ON ws.shift_id = s.id
+      WHERE a.organization_id = ? AND a.employee_id = ? AND YEAR(a.date) = ? AND MONTH(a.date) = ?
+      ORDER BY a.date ASC
+    `;
+    const [rows] = await db.execute(query, [organizationId, employeeId, year, month]);
+
+    return rows.map(r => {
+      let currentStatus = r.record_status || 'absent';
+      
+      // Strict late logic
+      if (currentStatus === 'present' || currentStatus === 'half_day') {
+        if (r.check_in_time) {
+          let hours, minutes;
+          if (r.check_in_time instanceof Date) {
+            hours = r.check_in_time.getHours();
+            minutes = r.check_in_time.getMinutes();
+          } else if (typeof r.check_in_time === 'string') {
+            if (r.check_in_time.includes('T')) {
+              const d = new Date(r.check_in_time);
+              hours = d.getHours();
+              minutes = d.getMinutes();
+            } else {
+              const timeParts = r.check_in_time.split(':');
+              if (timeParts.length >= 2) {
+                // To handle potential "YYYY-MM-DD HH:mm:ss" vs "HH:mm:ss"
+                const hourStr = timeParts[0].includes(' ') ? timeParts[0].split(' ')[1] : timeParts[0];
+                hours = parseInt(hourStr, 10);
+                minutes = parseInt(timeParts[1], 10);
+              }
+            }
+          }
+          if (hours !== undefined && minutes !== undefined) {
+            if (hours > 9 || (hours === 9 && minutes > 35)) {
+              currentStatus = 'late';
+            }
+          }
+        }
+      }
+
+      return {
+        id: r.record_id,
+        date: r.date,
+        status: currentStatus,
+        check_in_time: r.check_in_time,
+        check_out_time: r.check_out_time,
+        work_duration_minutes: r.work_duration_minutes,
+        late_minutes: r.late_minutes,
+        overtime_minutes: r.overtime_minutes,
+        shift_name: r.shift_name || 'General (9 AM - 6 PM)'
+      };
+    });
   }
 
   async addManualRecord(organizationId, data) {
@@ -201,7 +290,7 @@ class AttendanceService {
         [status, checkInTime || null, checkOutTime || null, workDurationMinutes || 0, lateMinutes || 0, earlyLeavingMinutes || 0, overtimeMinutes || 0, existing[0].id]
       );
       
-      await this.logAttendanceEvent(organizationId, employeeId, 'manual', 'Manual record updated');
+      // await this.logAttendanceEvent(organizationId, employeeId, 'manual', 'Manual record updated');
       return { message: 'Attendance record updated successfully' };
     } else {
       // Insert
@@ -212,7 +301,7 @@ class AttendanceService {
         [organizationId, employeeId, date, status, checkInTime || null, checkOutTime || null, workDurationMinutes || 0, lateMinutes || 0, earlyLeavingMinutes || 0, overtimeMinutes || 0]
       );
       
-      await this.logAttendanceEvent(organizationId, employeeId, 'manual', 'Manual record created');
+      // await this.logAttendanceEvent(organizationId, employeeId, 'manual', 'Manual record created');
       return { message: 'Attendance record created successfully' };
     }
   }

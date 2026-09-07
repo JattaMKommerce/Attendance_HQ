@@ -4,6 +4,7 @@ class EmployeeService {
   async getEmployees(organizationId, filters = {}) {
     let query = `
       SELECT e.id, e.employee_code, e.first_name, e.last_name, e.email, e.status, e.joining_date,
+             e.gross_salary, e.basic_salary, e.incentives, e.employment_type,
              d.name as department_name, des.name as designation_name
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
@@ -107,10 +108,10 @@ class EmployeeService {
       const [result] = await connection.execute(
         `INSERT INTO employees (
           organization_id, employee_code, first_name, last_name, email, phone, 
-          gender, date_of_birth, joining_date, employment_type, department_id, designation_id, status,
+          gender, blood_group, date_of_birth, joining_date, employment_type, department_id, designation_id, status,
           profile_image_url, experience_type, terms_accepted, terms_accepted_at,
           current_address, permanent_address, uan_number, resume_url, gross_salary, basic_salary, hra, deductions
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           organizationId,
           data.employee_code.trim(),
@@ -119,6 +120,7 @@ class EmployeeService {
           data.email.trim(),
           data.phone || null,
           data.gender || null,
+          data.blood_group || null,
           data.date_of_birth || null,
           data.joining_date,
           data.employment_type || 'full_time',
@@ -241,6 +243,7 @@ class EmployeeService {
           email = COALESCE(?, email),
           phone = COALESCE(?, phone),
           gender = COALESCE(?, gender),
+          blood_group = COALESCE(?, blood_group),
           date_of_birth = COALESCE(?, date_of_birth),
           joining_date = COALESCE(?, joining_date),
           employment_type = COALESCE(?, employment_type),
@@ -273,6 +276,7 @@ class EmployeeService {
           data.email?.trim() || null,
           data.phone || null,
           data.gender || null,
+          data.blood_group || null,
           data.date_of_birth || null,
           data.joining_date || null,
           data.employment_type || null,

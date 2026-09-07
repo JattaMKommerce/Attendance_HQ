@@ -59,6 +59,26 @@ exports.reviewLeaveRequest = async (requestId, organizationId, actionBy, action,
       throw new Error('Leave request is already processed');
     }
 
+    // Overlap Validation
+    if (action === 'approved') {
+      const [overlaps] = await connection.query(`
+        SELECT COUNT(*) as overlapCount 
+        FROM leave_requests lr
+        JOIN employees e ON lr.employee_id = e.id
+        WHERE lr.organization_id = ? 
+        AND e.department_id = ?
+        AND lr.status = 'approved'
+        AND lr.id != ?
+        AND (
+          (lr.start_date <= ? AND lr.end_date >= ?)
+        )
+      `, [organizationId, request.department_id, requestId, request.end_date, request.start_date]);
+      
+      if (overlaps[0].overlapCount >= 2) {
+        throw new Error('Critical Overlap: 2 or more employees in this department are already on leave during this period.');
+      }
+    }
+
     let status = action === 'approved' ? 'approved' : 'rejected';
 
     await connection.query(

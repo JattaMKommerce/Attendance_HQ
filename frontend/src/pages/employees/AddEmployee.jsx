@@ -52,7 +52,7 @@ const AddEmployee = () => {
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', email: '', phone: '',
     employee_code: '', joining_date: new Date().toISOString().split('T')[0],
-    gender: '', employment_type: 'full_time', date_of_birth: '',
+    gender: '', blood_group: '', employment_type: 'full_time', date_of_birth: '',
     department_id: '', designation_id: '',
     current_address: '', permanent_address: '',
     emergency_contact_name: '', emergency_contact_phone: '',
@@ -157,7 +157,7 @@ const AddEmployee = () => {
     if (!formData.terms_accepted) { setError('You must accept the terms and conditions.'); setLoading(false); return; }
     try {
       const payload = { ...formData };
-      ['department_id', 'designation_id', 'gender'].forEach(k => { if (!payload[k]) payload[k] = null; });
+      ['department_id', 'designation_id', 'gender', 'blood_group'].forEach(k => { if (!payload[k]) payload[k] = null; });
       if (payload.experience_type === 'fresher') payload.experiences = [];
       const res = await createEmployee(payload);
       if (res.success) navigate(`/app/employees/${res.data.id}`);
@@ -217,6 +217,15 @@ const AddEmployee = () => {
             <div className="input-group"><label className="input-label">Gender</label>
               <select name="gender" className="input-control" value={formData.gender} onChange={handleChange}>
                 <option value="">Select Gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+            <div className="input-group"><label className="input-label">Blood Group</label>
+              <select name="blood_group" className="input-control" value={formData.blood_group} onChange={handleChange}>
+                <option value="">Select Blood Group</option>
+                <option value="A+">A+</option><option value="A-">A-</option>
+                <option value="B+">B+</option><option value="B-">B-</option>
+                <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                <option value="O+">O+</option><option value="O-">O-</option>
               </select>
             </div>
             <div className="input-group"><label className="input-label">Current Address</label><textarea name="current_address" className="input-control" value={formData.current_address} onChange={handleChange} rows="2" /></div>

@@ -1,0 +1,447 @@
+.perf-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Header */
+.perf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.perf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+.perf-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+.perf-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.perf-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+.perf-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.perf-export-btn:hover {
+  background: #fef2f2;
+}
+
+/* KPI Cards */
+.perf-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.perf-kpi-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.perf-kpi-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.perf-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.perf-kpi-label {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.perf-kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+.perf-kpi-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.perf-kpi-desc { color: #64748b; }
+.perf-kpi-vs { color: #64748b; font-size: 11px; }
+.perf-kpi-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Panels */
+.perf-middle-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+.perf-bottom-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+.perf-charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.perf-panel {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.perf-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.perf-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.perf-link {
+  font-size: 13px;
+  color: #ef4444;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* Utilities */
+.bg-purple { background: #ede9fe; }
+.bg-green { background: #d1fae5; }
+.bg-blue { background: #dbeafe; }
+.bg-orange { background: #ffedd5; }
+.bg-red { background: #fee2e2; }
+
+.text-green { color: #10b981; }
+.text-red { color: #ef4444; }
+
+/* Table */
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.perf-table th {
+  text-align: left;
+  padding: 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+.perf-table td {
+  padding: 16px 0;
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 500;
+  border-bottom: 1px solid #f1f5f9;
+}
+.perf-dept-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.perf-dept-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.perf-dept-name {
+  font-weight: 600;
+}
+.perf-comp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 120px;
+}
+.perf-comp-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.perf-comp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.perf-rating-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.perf-trend-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Donut Chart */
+.perf-donut-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.perf-donut-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+.perf-donut {
+  width: 100%;
+  height: 100%;
+}
+.perf-donut-center {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.perf-donut-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.perf-donut-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+.perf-legend-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.perf-legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #475569;
+}
+.perf-legend-item strong {
+  margin-left: auto;
+  color: #64748b;
+  font-weight: 500;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+.dot-green { background: #10b981; }
+.dot-blue { background: #3b82f6; }
+.dot-yellow { background: #f59e0b; }
+.dot-red { background: #ef4444; }
+
+/* Bar Chart */
+.perf-bar-chart {
+  display: flex;
+  height: 150px;
+  gap: 16px;
+}
+.perf-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: right;
+  padding-bottom: 24px;
+}
+.perf-bars {
+  flex: 1;
+  display: flex;
+  justify-content: space-around;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+  position: relative;
+}
+.perf-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  position: relative;
+}
+.perf-bar {
+  width: 32px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.perf-bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+}
+.perf-bar-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.perf-x-lbl {
+  position: absolute;
+  bottom: -24px;
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Insights */
+.perf-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.perf-insight-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.perf-insight-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.perf-insight-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.perf-insight-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+.perf-insight-content strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Upcoming Reviews */
+.perf-upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.perf-upcoming-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.perf-upcoming-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.perf-upcoming-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.perf-upcoming-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.perf-upcoming-left h4 {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.perf-upcoming-left p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+.perf-upcoming-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.perf-upcoming-right strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.perf-upcoming-right span {
+  font-size: 11px;
+  color: #64748b;
+}

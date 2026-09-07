@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Calendar, Search, AlertCircle, Clock, CheckSquare, 
+  Users, CheckCircle, XCircle, Download, ChevronDown, 
+  Eye, Filter, X
+} from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
-import * as employeeApi from '../../services/employeeApi';
-import { ChevronRight, Calendar, Search, AlertCircle, Clock, CheckSquare } from 'lucide-react';
+import api from '../../services/api';
+import AttendanceEmployeeDashboard from './AttendanceEmployeeDashboard';
+import './AttendanceDashboard.css';
+import './Attendance.css';
 
-const AttendanceOverview = ({ setActiveTab }) => {
+const AttendanceOverview = () => {
+  const navigate = useNavigate();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [department, setDepartment] = useState('');
-  const [shift, setShift] = useState('');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [viewEmployeeId, setViewEmployeeId] = useState(null);
   
   const [metrics, setMetrics] = useState({
-    total: 0,
+    totalEmployees: 0,
     present: 0,
     absent: 0,
     late: 0,
@@ -18,195 +27,471 @@ const AttendanceOverview = ({ setActiveTab }) => {
     missingPunches: 0,
     pendingRequests: 0
   });
+
+  const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modals state
+  const [activeModal, setActiveModal] = useState(null); // 'missing_checkout', 'correction', 'unapproved_absence'
+  const [selectedIssue, setSelectedIssue] = useState(null);
+
+  const exportToCSV = () => {
+    if (tableData.length === 0) return;
+    const headers = ['Employee ID', 'Name', 'Department', 'Shift', 'Check In', 'Check Out', 'Hours', 'Status'];
+    const csvRows = [headers.join(',')];
+    tableData.forEach(row => {
+      const hours = row.work_duration_minutes ? `${Math.floor(row.work_duration_minutes/60)}h ${row.work_duration_minutes%60}m` : '';
+      const cleanShift = row.shift_name ? row.shift_name.replace(/\s*\(.*?\)/, '') : '';
+      const statusText = row.status === 'not_marked' ? 'No Record' : row.status;
+      csvRows.push([
+        row.employee_code,
+        `${row.first_name} ${row.last_name}`,
+        row.department_name || '',
+        cleanShift,
+        row.check_in_time || '',
+        row.check_out_time || '',
+        hours,
+        statusText
+      ].map(val => `"${val}"`).join(','));
+    });
+    
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Attendance_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Lookups for filters
   const [departments, setDepartments] = useState([]);
   const [shifts, setShifts] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedShift, setSelectedShift] = useState(''); // Not currently used by backend query, but UI ready
 
-  useEffect(() => {
-    const fetchLookups = async () => {
-      try {
-        const [deptRes, shiftRes] = await Promise.all([
-          employeeApi.getLookups(),
-          attendanceApi.getShifts()
-        ]);
-        if (deptRes.success) setDepartments(deptRes.data.departments || []);
-        if (shiftRes.data.success) setShifts(shiftRes.data.data || []);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchLookups();
-  }, []);
-
-  const fetchOverview = async () => {
+  const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const response = await attendanceApi.getOverview({
-        date,
-        department,
-        shift,
-        search
-      });
-      if (response.data.success) {
-        setMetrics(response.data.data);
+      const overviewRes = await attendanceApi.getOverview(date, { department: selectedDepartment, shift: selectedShift });
+      if (overviewRes.data && overviewRes.data.data) {
+        setMetrics(overviewRes.data.data);
+      } else if (overviewRes.data) {
+        setMetrics(overviewRes.data);
+      }
+
+      const recordsRes = await attendanceApi.getRecords({ date, status: statusFilter, search, department: selectedDepartment, shift: selectedShift });
+      if (recordsRes.data && recordsRes.data.data) {
+        setTableData(recordsRes.data.data);
+      } else if (Array.isArray(recordsRes.data)) {
+        setTableData(recordsRes.data);
+      } else {
+        setTableData([]);
       }
     } catch (error) {
-      console.error('Failed to fetch attendance overview:', error);
+      console.error('Error fetching attendance data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOverview();
-  }, [date, department, shift]);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchOverview();
+  const loadLookups = async () => {
+    try {
+      // Assuming employeeApi is available, we would use it, but since we just need it once, let's fetch raw if not imported
+      const [shiftsRes, lookupsRes] = await Promise.all([
+        attendanceApi.getShifts().catch(() => ({ data: { data: [] } })),
+        fetch('http://localhost:5001/api/employees/lookups', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        }).then(res => res.json()).catch(() => ({ data: { departments: [] } }))
+      ]);
+      
+      if (shiftsRes.data && shiftsRes.data.data) {
+        setShifts(shiftsRes.data.data);
+      }
+      if (lookupsRes.data && lookupsRes.data.departments) {
+        setDepartments(lookupsRes.data.departments);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  if (loading) {
-    return <div className="loading-state">Loading overview data...</div>;
+  useEffect(() => {
+    loadLookups();
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [date, statusFilter, search, selectedDepartment]);
+
+  const presentPct = metrics.totalEmployees ? ((metrics.present / metrics.totalEmployees) * 100).toFixed(1) : 0;
+  const absentPct = metrics.totalEmployees ? ((metrics.absent / metrics.totalEmployees) * 100).toFixed(1) : 0;
+  const latePct = metrics.totalEmployees ? ((metrics.late / metrics.totalEmployees) * 100).toFixed(1) : 0;
+  const leavePct = metrics.totalEmployees ? ((metrics.onLeave / metrics.totalEmployees) * 100).toFixed(1) : 0;
+
+  const issues = [
+    { id: 'missing_checkout', title: 'Missing Check-out', desc: 'Employees forgot to check out', count: metrics.missingPunches, action: 'Review', type: 'danger', icon: AlertCircle },
+    { id: 'correction', title: 'Attendance Correction Requests', desc: 'Employees requested changes', count: metrics.pendingRequests, action: 'Approve', type: 'primary', icon: CheckSquare },
+    { id: 'unapproved_absence', title: 'Unapproved Absence', desc: 'No attendance / leave record', count: metrics.absent, action: 'Review', type: 'orange', icon: Users }
+  ];
+
+  const handleIssueClick = (issue) => {
+    setSelectedIssue(issue);
+    setActiveModal(issue.id);
+  };
+
+  const closeModal = () => {
+    setActiveModal(null);
+    setSelectedIssue(null);
+  };
+
+  const handleKpiClick = (status) => {
+    setStatusFilter(status);
+    const tableEl = document.querySelector('.att-table-panel');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  if (viewEmployeeId) {
+    return (
+      <div className="attendance-dashboard">
+        <AttendanceEmployeeDashboard 
+          employeeId={viewEmployeeId} 
+          onBack={() => setViewEmployeeId(null)} 
+        />
+      </div>
+    );
   }
 
   return (
-    <div className="attendance-overview" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="attendance-dashboard">
       
-      {/* Filters Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0 12px' }}>
-            <Calendar size={16} color="#6b7280" />
+      {/* Top Header */}
+      <div className="att-header">
+        <div>
+          <h1 className="att-title">Attendance</h1>
+          <p className="att-subtitle">Monitor employee attendance, working hours and attendance issues.</p>
+        </div>
+        <div className="att-header-actions">
+          <div className="att-date-picker">
             <input 
               type="date" 
-              style={{ border: 'none', background: 'transparent', padding: '8px', outline: 'none', fontSize: '14px', color: '#374151' }}
               value={date} 
               onChange={(e) => setDate(e.target.value)} 
+              className="att-date-input"
             />
           </div>
-          <select 
-            style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', background: '#f9fafb', outline: 'none', color: '#374151' }}
-            value={department} 
-            onChange={(e) => setDepartment(e.target.value)}
-          >
-            <option value="">All Departments</option>
-            {departments.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+          <button className="att-export-btn" onClick={exportToCSV}>
+            <Download size={16} />
+            Export Report
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="att-kpi-row">
+        <div className={`att-kpi-card clickable ${statusFilter === 'all' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('all')}>
+          <div className="att-kpi-icon bg-pink"><Users size={20} color="#ec4899" /></div>
+          <div>
+            <div className="att-kpi-label">Total Employees</div>
+            <div className="att-kpi-value">{metrics.totalEmployees}</div>
+          </div>
+        </div>
+        <div className={`att-kpi-card clickable ${statusFilter === 'present' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('present')}>
+          <div className="att-kpi-icon bg-green"><CheckCircle size={20} color="#10b981" /></div>
+          <div>
+            <div className="att-kpi-label">Present</div>
+            <div className="att-kpi-value">{metrics.present}</div>
+            <div className="att-kpi-pct text-green">{presentPct}%</div>
+          </div>
+        </div>
+        <div className={`att-kpi-card clickable ${statusFilter === 'absent' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('absent')}>
+          <div className="att-kpi-icon bg-red"><XCircle size={20} color="#ef4444" /></div>
+          <div>
+            <div className="att-kpi-label">Absent</div>
+            <div className="att-kpi-value">{metrics.absent}</div>
+            <div className="att-kpi-pct text-red">{absentPct}%</div>
+          </div>
+        </div>
+        <div className={`att-kpi-card clickable ${statusFilter === 'late' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('late')}>
+          <div className="att-kpi-icon bg-yellow"><Clock size={20} color="#f59e0b" /></div>
+          <div>
+            <div className="att-kpi-label">Late</div>
+            <div className="att-kpi-value">{metrics.late}</div>
+            <div className="att-kpi-pct text-yellow">{latePct}%</div>
+          </div>
+        </div>
+        <div className={`att-kpi-card clickable ${statusFilter === 'leave' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('leave')}>
+          <div className="att-kpi-icon bg-purple"><Calendar size={20} color="#8b5cf6" /></div>
+          <div>
+            <div className="att-kpi-label">On Leave</div>
+            <div className="att-kpi-value">{metrics.onLeave}</div>
+            <div className="att-kpi-pct text-purple">{leavePct}%</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Middle Panels */}
+      <div className="att-middle-row">
+        {/* Donut Chart Panel */}
+        <div className="att-panel">
+          <div className="att-panel-header">
+            <h3>Attendance Breakdown</h3>
+            <select className="att-dropdown" style={{border: '1px solid #e2e8f0', background: 'transparent'}}>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+            </select>
+          </div>
+          <div className="att-chart-container">
+            <div className="att-donut-wrapper">
+              <svg viewBox="0 0 100 100" className="att-donut">
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f3f4f6" strokeWidth="15" />
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#8b5cf6" strokeWidth="15" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (leavePct / 100))}`} transform="rotate(-90 50 50)" />
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" strokeWidth="15" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (absentPct / 100))}`} transform={`rotate(${-90 + (360 * (leavePct / 100))} 50 50)`} />
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="15" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (latePct / 100))}`} transform={`rotate(${-90 + (360 * ((Number(leavePct) + Number(absentPct)) / 100))} 50 50)`} />
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="15" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (presentPct / 100))}`} transform={`rotate(${-90 + (360 * ((Number(leavePct) + Number(absentPct) + Number(latePct)) / 100))} 50 50)`} />
+              </svg>
+              <div className="att-donut-center">
+                <span className="att-donut-val">{presentPct}%</span>
+                <span className="att-donut-lbl">Present</span>
+              </div>
+            </div>
+            <div className="att-chart-legend">
+              <div className="att-legend-item"><span className="dot dot-green"></span> Present <strong>{metrics.present} ({presentPct}%)</strong></div>
+              <div className="att-legend-item"><span className="dot dot-yellow"></span> Late <strong>{metrics.late} ({latePct}%)</strong></div>
+              <div className="att-legend-item"><span className="dot dot-red"></span> Absent <strong>{metrics.absent} ({absentPct}%)</strong></div>
+              <div className="att-legend-item"><span className="dot dot-purple"></span> On Leave <strong>{metrics.onLeave} ({leavePct}%)</strong></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance Issues Panel */}
+        <div className="att-panel">
+          <div className="att-panel-header">
+            <h3>Attendance Issues</h3>
+          </div>
+          <div className="att-issues-list">
+            {issues.map((issue, idx) => (
+              <div className="att-issue-item" key={idx}>
+                <div className="att-issue-left">
+                  <issue.icon size={18} className={`icon-${issue.type}`} />
+                  <div>
+                    <h4>{issue.title}</h4>
+                    <p>{issue.desc}</p>
+                  </div>
+                </div>
+                <div className="att-issue-right">
+                  <span className={`count count-${issue.type}`}>{issue.count}</span>
+                  <button className={`btn-${issue.type}`} onClick={() => handleIssueClick(issue)}>
+                    {issue.action}
+                  </button>
+                </div>
+              </div>
             ))}
-          </select>
-          <select 
-            style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', background: '#f9fafb', outline: 'none', color: '#374151' }}
-            value={shift} 
-            onChange={(e) => setShift(e.target.value)}
-          >
-            <option value="">All Shifts</option>
-            {shifts.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0 12px', width: '250px' }}>
-          <Search size={16} color="#6b7280" />
-          <input 
-            type="text" 
-            style={{ border: 'none', background: 'transparent', padding: '8px', outline: 'none', fontSize: '14px', width: '100%', color: '#374151' }}
-            value={search} 
-            onChange={(e) => setSearch(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && fetchOverview()}
-            placeholder="Search Name or ID..."
-          />
-        </div>
-      </div>
-
-      {/* Attention Required Cards */}
-      <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#374151', fontWeight: 600 }}>Action Required</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-          <div 
-            onClick={() => setActiveTab('records')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', padding: '20px', borderRadius: '8px', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-          >
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>
-                <AlertCircle size={20} color="#dc2626" />
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500 }}>Missing Punches</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.missingPunches}</div>
-              </div>
-            </div>
-            <ChevronRight size={20} color="#d1d5db" />
           </div>
+        </div>
 
-          <div 
-            onClick={() => setActiveTab('records')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', padding: '20px', borderRadius: '8px', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-          >
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ background: '#fffbeb', padding: '10px', borderRadius: '8px' }}>
-                <Clock size={20} color="#d97706" />
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500 }}>Late Arrivals</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.late}</div>
-              </div>
-            </div>
-            <ChevronRight size={20} color="#d1d5db" />
+        {/* This Month Overview Panel */}
+        <div className="att-panel">
+          <div className="att-panel-header">
+            <h3>This Month Overview</h3>
+            <button className="att-dropdown">This Month <ChevronDown size={14} /></button>
           </div>
-
-          <div 
-            onClick={() => setActiveTab('regularization')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', padding: '20px', borderRadius: '8px', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-          >
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '8px' }}>
-                <CheckSquare size={20} color="#2563eb" />
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500 }}>Pending Requests</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.pendingRequests}</div>
-              </div>
+          <div className="att-progress-list">
+            <div className="att-progress-item">
+              <div className="att-prog-text"><span>Average Attendance</span><span>89.2%</span></div>
+              <div className="att-prog-bar"><div className="att-prog-fill bg-green" style={{width: '89.2%'}}></div></div>
             </div>
-            <ChevronRight size={20} color="#d1d5db" />
+            <div className="att-progress-item">
+              <div className="att-prog-text"><span>Average Late</span><span>3.6%</span></div>
+              <div className="att-prog-bar"><div className="att-prog-fill bg-yellow" style={{width: '15%'}}></div></div>
+            </div>
+            <div className="att-progress-item">
+              <div className="att-prog-text"><span>Average Absence</span><span>5.2%</span></div>
+              <div className="att-prog-bar"><div className="att-prog-fill bg-red" style={{width: '25%'}}></div></div>
+            </div>
+            <div className="att-progress-item">
+              <div className="att-prog-text"><span>Overtime Hours</span><span>142h 30m</span></div>
+              <div className="att-prog-bar"><div className="att-prog-fill bg-purple" style={{width: '60%'}}></div></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Unified Metrics Strip */}
-      <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#374151', fontWeight: 600 }}>Daily Overview</h3>
-        <div style={{ display: 'flex', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div onClick={() => setActiveTab('records')} style={{ flex: 1, padding: '20px', cursor: 'pointer', '&:hover': { background: '#f9fafb' } }}>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: 500 }}>Total Employees</div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.total}</div>
-          </div>
-          <div style={{ width: '1px', background: '#e5e7eb' }}></div>
-          
-          <div onClick={() => setActiveTab('records')} style={{ flex: 1, padding: '20px', cursor: 'pointer' }}>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: 500 }}>Present</div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.present}</div>
-          </div>
-          <div style={{ width: '1px', background: '#e5e7eb' }}></div>
-          
-          <div onClick={() => setActiveTab('records')} style={{ flex: 1, padding: '20px', cursor: 'pointer' }}>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: 500 }}>Absent</div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.absent}</div>
-          </div>
-          <div style={{ width: '1px', background: '#e5e7eb' }}></div>
-          
-          <div onClick={() => setActiveTab('records')} style={{ flex: 1, padding: '20px', cursor: 'pointer' }}>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: 500 }}>On Leave</div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827', lineHeight: '1' }}>{metrics.onLeave}</div>
+      {/* Table Section */}
+      <div className="att-table-panel">
+        <div className="att-table-toolbar">
+          <h3>Employee Attendance</h3>
+          <div className="att-table-filters">
+            <div className="att-search">
+              <Search size={16} />
+              <input type="text" placeholder="Search employee..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table className="att-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}><input type="checkbox" /></th>
+                <th>Employee</th>
+                <th>
+                  <select 
+                    value={selectedDepartment} 
+                    onChange={e => setSelectedDepartment(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', fontWeight: '600', color: '#64748b', outline: 'none', cursor: 'pointer', padding: 0, width: '110px', textOverflow: 'ellipsis' }}
+                  >
+                    <option value="">Department</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </th>
+                <th>
+                  <select 
+                    value={selectedShift} 
+                    onChange={e => setSelectedShift(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', fontWeight: '600', color: '#64748b', outline: 'none', cursor: 'pointer', padding: 0, width: '75px', textOverflow: 'ellipsis' }}
+                  >
+                    <option value="">Shift</option>
+                    {shifts.map(shift => (
+                      <option key={shift.id} value={shift.id}>{shift.name}</option>
+                    ))}
+                  </select>
+                </th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Hours</th>
+                <th>
+                  <select 
+                    value={statusFilter} 
+                    onChange={e => setStatusFilter(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', fontWeight: '600', color: '#64748b', outline: 'none', cursor: 'pointer', padding: 0, width: '85px' }}
+                  >
+                    <option value="all">Status</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="late">Late</option>
+                    <option value="leave">On Leave</option>
+                  </select>
+                </th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="9" style={{textAlign: 'center'}}>Loading data...</td></tr>
+              ) : tableData.length === 0 ? (
+                <tr><td colSpan="9" style={{textAlign: 'center'}}>No records found.</td></tr>
+              ) : (
+                tableData.map((row, idx) => {
+                  let badgeBg = '#f1f5f9';
+                  let badgeColor = '#64748b';
+                  
+                  if (row.status === 'present') { badgeBg = '#d1fae5'; badgeColor = '#10b981'; }
+                  else if (row.status === 'late') { badgeBg = '#fef3c7'; badgeColor = '#d97706'; }
+                  else if (row.status === 'absent') { badgeBg = '#fee2e2'; badgeColor = '#ef4444'; }
+                  else if (row.status === 'not_marked') { badgeBg = '#f1f5f9'; badgeColor = '#64748b'; }
+                  else if (row.status === 'leave') { badgeBg = '#ede9fe'; badgeColor = '#8b5cf6'; }
+
+                  // Clean shift name by removing anything in parentheses (e.g. "(9 AM - 6 PM)")
+                  const cleanShiftName = row.shift_name ? row.shift_name.replace(/\s*\(.*?\)/, '') : '—';
+
+                  return (
+                    <tr key={idx}>
+                      <td><input type="checkbox" /></td>
+                      <td>
+                        <div className="att-emp-cell">
+                          <div className="att-avatar bg-gray">
+                            {row.first_name ? row.first_name.charAt(0) : 'U'}
+                            {row.last_name ? row.last_name.charAt(0) : ''}
+                          </div>
+                          <div>
+                            <div className="att-emp-name">{row.first_name} {row.last_name}</div>
+                            <div className="att-emp-email">{row.employee_code}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{row.department_name || '-'}</td>
+                      <td>{cleanShiftName}</td>
+                      <td>{row.check_in_time && <span className="status-dot bg-green"></span>} {row.check_in_time || '—'}</td>
+                      <td>{row.check_out_time || '—'}</td>
+                      <td>{row.work_duration_minutes ? `${Math.floor(row.work_duration_minutes/60)}h ${row.work_duration_minutes%60}m` : '—'}</td>
+                      <td>
+                        <span className="att-badge" style={{ backgroundColor: badgeBg, color: badgeColor }}>
+                          {row.status === 'not_marked' ? 'No Record' : row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                        </span>
+                      </td>
+                      <td>
+                        <button className="att-action-btn" onClick={() => setViewEmployeeId(row.employee_id)}>
+                          <Eye size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {activeModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{selectedIssue?.title}</h2>
+              <button className="icon-btn" onClick={closeModal}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              {activeModal === 'missing_checkout' && selectedIssue && (
+                <div>
+                  <p>Employee <strong>Sarah Jenkins</strong> forgot to check out on {date}.</p>
+                  <ul className="modal-details-list">
+                    <li><strong>Check-in:</strong> 09:10 AM</li>
+                    <li><strong>Expected Check-out:</strong> 06:00 PM</li>
+                  </ul>
+                  <div className="modal-actions-row">
+                    <button className="btn btn-primary">Mark Check-out</button>
+                    <button className="btn btn-secondary">Edit Attendance</button>
+                    <button className="btn btn-danger">Dismiss</button>
+                  </div>
+                </div>
+              )}
+              {activeModal === 'correction' && (
+                <div>
+                  <p>Employee <strong>Michael Chen</strong> requested a correction for {date}.</p>
+                  <ul className="modal-details-list">
+                    <li><strong>Original:</strong> Absent</li>
+                    <li><strong>Requested:</strong> Present (Forgot to punch)</li>
+                    <li><strong>Reason:</strong> "I was at a client meeting all morning."</li>
+                  </ul>
+                  <div className="modal-actions-row">
+                    <button className="btn btn-primary">Approve Request</button>
+                    <button className="btn btn-danger">Reject</button>
+                  </div>
+                </div>
+              )}
+              {activeModal === 'unapproved_absence' && (
+                <div>
+                  <p>Employee <strong>Jane Doe</strong> has an unapproved absence on {date}.</p>
+                  <p style={{color: '#64748b', fontSize: '13px', marginTop: '10px'}}>
+                    No attendance punch or leave request found for this day.
+                  </p>
+                  <div className="modal-actions-row">
+                    <button className="btn btn-danger">Mark Absent (LWP)</button>
+                    <button className="btn btn-secondary">Add Leave</button>
+                    <button className="btn" style={{color: '#2563eb'}}>View Details</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
