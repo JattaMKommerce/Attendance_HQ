@@ -16,6 +16,7 @@ import EmployeeProfile from './pages/employees/EmployeeProfile';
 import IdCardStandaloneView from './pages/employees/IdCardStandaloneView';
 
 import Attendance from './pages/attendance/Attendance';
+import Roster from './pages/attendance/Roster';
 import Leave from './pages/leave/Leave';
 
 // Employee Portal
@@ -172,11 +173,16 @@ const AppRoutes = () => {
           <Route path="employee/dashboard" element={<EmployeeDashboard />} />
           <Route path="employee/profile" element={<MyProfile />} />
           <Route path="employee/attendance" element={<MyAttendance />} />
+          <Route path="employee/roster" element={<Roster />} />
           <Route path="employee/leave" element={<MyLeave />} />
           <Route path="employee/leave/apply" element={<ApplyLeave />} />
+          <Route path="employee/calendar" element={<Placeholder title="Company Calendar" />} />
           <Route path="employee/payslips" element={<MyPayslips />} />
           <Route path="employee/documents" element={<MyDocuments />} />
+          <Route path="employee/requests" element={<Placeholder title="My Requests" />} />
           <Route path="employee/directory" element={<EmployeeDirectory />} />
+          <Route path="employee/ai" element={<Placeholder title="AI Assistant" />} />
+          <Route path="employee/notifications" element={<Placeholder title="Notifications" />} />
           <Route path="employee/settings" element={<MySettings />} />
           
           {mapPlaceholderRoutes(appPlaceholders)}

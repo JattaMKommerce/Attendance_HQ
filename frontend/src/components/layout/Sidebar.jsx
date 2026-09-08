@@ -9,28 +9,13 @@ import {
   filterNavigationByRole,
 } from '../../config/navigation';
 
-// Safely try to consume EmployeeContext without crashing if not mounted
-const useSafeEmployeeContext = () => {
-  try {
-    const { useEmployee } = require('../../context/EmployeeContext');
-    return useEmployee();
-  } catch {
-    return null;
-  }
-};
+import { EmployeeContext } from '../../context/EmployeeContext';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useContext(AuthContext);
-
-  // Try to get unread notification count from EmployeeContext (only available inside EmployeeShell)
-  let unreadCount = 0;
-  try {
-    // Dynamic import of the hook to avoid crashing in admin shell
-    const { EmployeeContext } = require('../../context/EmployeeContext');
-    const empCtx = useContext(EmployeeContext);
-    if (empCtx) unreadCount = empCtx.unreadCount || 0;
-  } catch (_) {}
+  const empCtx = useContext(EmployeeContext);
+  const unreadCount = empCtx?.unreadCount || 0;
 
   if (!user) return null;
 
