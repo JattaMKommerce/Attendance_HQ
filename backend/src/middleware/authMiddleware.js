@@ -2,7 +2,7 @@ const { verifyAccessToken } = require('../utils/tokenUtils');
 const db = require('../config/db');
 
 // Authenticate user by verifying JWT
-const authenticate = async (req, res, next) => {
+const authenticate = async (req, res, next) => { console.log("Auth MW start");
   try {
     let token;
     const authHeader = req.headers.authorization;
@@ -113,13 +113,8 @@ const authorizePermission = (requiredPermission) => {
       return res.status(401).json({ success: false, message: 'Not authenticated.' });
     }
 
-    // SUPER_ADMIN has all platform permissions, but we'll still check the set.
-    // If we want implicit super admin override:
     if (req.user.roles.includes('SUPER_ADMIN')) {
-       // Super admin still needs to be checked against permissions set, 
-       // or implicitly return next() based on business rules.
-       // The prompt says: "SUPER_ADMIN is a platform-level user... permissions inherited from roles".
-       // Since we mapped all permissions to SUPER_ADMIN role in seeds, they are in the set.
+       return next();
     }
 
     const hasPermission = req.user.permissions.includes(requiredPermission);

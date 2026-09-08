@@ -28,6 +28,13 @@ import {
   CalendarDays,
   CreditCard as IdCard,
   MessageSquare,
+  Layers,
+  TrendingDown,
+  AlertTriangle,
+  UserCheck,
+  HeartHandshake,
+  LogOut,
+  Banknote,
 } from 'lucide-react';
 
 // ── Employee Portal Navigation ─────────────────────────────────────────────
@@ -66,25 +73,33 @@ export const organizationNavigation = [
   {
     group: 'Workspace',
     items: [
-      { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'Onboarding', path: '/app/employees', icon: Users, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
-      { label: 'Attendance', path: '/app/attendance', icon: Calendar, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
-      { label: 'Leave', path: '/app/leave', icon: Umbrella, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Dashboard',  path: '/app/dashboard',   icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Onboarding', path: '/app/employees',   icon: Users,           roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Attendance', path: '/app/attendance',  icon: Calendar,        roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
     ]
   },
   {
     group: 'Management',
     items: [
-      { label: 'Payroll', path: '/app/payroll', icon: DollarSign, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'Performance', path: '/app/performance', icon: Target, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
-      { label: 'Incentives', path: '/app/incentives', icon: Gift, roles: ['ORG_ADMIN', 'HR_ADMIN', 'PAYROLL_MANAGER'] },
-      { label: 'Recruitment', path: '/app/recruitment', icon: UserPlus, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Payroll',     path: '/app/payroll',     icon: DollarSign, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
+    ]
+  },
+  {
+    group: 'Employee Lifecycle',
+    items: [
+      { label: 'Probation',           path: '/app/lifecycle/probation',  icon: UserCheck,      roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
+      { label: 'Performance & PIP',   path: '/app/lifecycle/performance',icon: TrendingDown,   roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
+      { label: 'Employee Actions',    path: '/app/lifecycle/actions',    icon: Layers,         roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER'] },
+      { label: 'Employee Relations',  path: '/app/lifecycle/relations',  icon: AlertTriangle,  roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Separation',          path: '/app/lifecycle/separation', icon: LogOut,         roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Full & Final Settlement', path: '/app/lifecycle/settlement', icon: Banknote,   roles: ['ORG_ADMIN', 'HR_ADMIN', 'FINANCE'] },
     ]
   },
   {
     group: 'Operations',
     items: [
-      { label: 'Assets DB', path: '/app/assets', icon: Monitor, roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Asset Management', path: '/app/assets',       icon: Monitor,    roles: ['ORG_ADMIN', 'HR_ADMIN'] },
+      { label: 'Offboarding',      path: '/app/offboarding',  icon: Briefcase,  roles: ['ORG_ADMIN', 'HR_ADMIN'] },
     ]
   }
 ];

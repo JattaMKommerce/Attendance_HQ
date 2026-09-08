@@ -12,13 +12,13 @@ class AttendanceController {
     }
   }
 
-  async getRecords(req, res, next) {
+  async getRecords(req, res, next) { console.log("getRecords called!");
     try {
       const filters = {
         date: req.query.date,
         startDate: req.query.startDate,
         endDate: req.query.endDate,
-        departmentId: req.query.departmentId,
+        department: req.query.department || req.query.departmentId, // align with service's filters.department key
         status: req.query.status,
         search: req.query.search,
         limit: req.query.limit || 50,

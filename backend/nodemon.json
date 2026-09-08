@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    "uploads/*",
+    "test-*.js",
+    "check-*.js"
+  ]
+}

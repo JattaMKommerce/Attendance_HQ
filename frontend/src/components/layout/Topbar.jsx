@@ -1,11 +1,32 @@
-import React, { useContext } from 'react';
-import { Menu, Bell, Search, LogOut, User } from 'lucide-react';
+import React, { useContext, useState } from 'react';
+import { Menu, Bell, Search, LogOut, User, ScanLine } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { AuthContext } from '../../context/AuthContext';
 
 const Topbar = ({ toggleMobileSidebar }) => {
   const { user, logout } = useContext(AuthContext);
+  const [showScanner, setShowScanner] = useState(false);
+  const navigate = useNavigate();
 
   if (!user) return null;
+
+  const handleScan = (detectedCodes) => {
+    if (detectedCodes && detectedCodes.length > 0) {
+      const scannedValue = detectedCodes[0].rawValue;
+      if (scannedValue) {
+        setShowScanner(false);
+        // If it's a URL within the same origin, navigate to the path
+        if (scannedValue.startsWith(window.location.origin)) {
+          const path = scannedValue.replace(window.location.origin, '');
+          navigate(path);
+        } else {
+          // External URL (fallback)
+          window.location.href = scannedValue;
+        }
+      }
+    }
+  };
 
   return (
     <header className="topbar">
@@ -34,6 +55,10 @@ const Topbar = ({ toggleMobileSidebar }) => {
           </div>
         )}
         
+        <button className="icon-btn" title="Scan ID Card QR" onClick={() => setShowScanner(true)}>
+          <ScanLine size={18} />
+        </button>
+        
         <button className="icon-btn" title="Notifications">
           <Bell size={18} />
         </button>
@@ -49,6 +74,20 @@ const Topbar = ({ toggleMobileSidebar }) => {
           </div>
         </div>
       </div>
+
+      {showScanner && (
+        <div style={styles.modalOverlay} onClick={() => setShowScanner(false)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>Scan Employee ID</h3>
+              <button className="icon-btn" onClick={() => setShowScanner(false)}>✕</button>
+            </div>
+            <div style={{ borderRadius: '8px', overflow: 'hidden', backgroundColor: '#000' }}>
+              <Scanner onScan={handleScan} onError={(error) => console.log(error?.message)} />
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
@@ -102,6 +141,20 @@ const styles = {
   },
   profileDropdown: {
     display: 'flex'
+  },
+  modalOverlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 9999
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: '24px',
+    borderRadius: '12px',
+    width: '100%',
+    maxWidth: '400px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
   }
 };
 

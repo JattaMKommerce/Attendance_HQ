@@ -845,17 +845,25 @@
 
 .mac-calc-btn.zero {
   grid-column: span 2;
-  border-bottom-left-radius: 12px;
   justify-content: flex-start;
-  padding-left: 26px;
+  padding-left: 28px;
+  border-bottom-left-radius: 0;
 }
 
 .mac-calc-btn.dot {
-  
+  background-color: #5b5b5b;
 }
 
 .mac-calc-btn.equals {
+  border-bottom-right-radius: 0;
+}
+
+/* Round the outer corners of the bottom row */
+.mac-calc-grid > .mac-calc-btn:nth-last-child(1) {
   border-bottom-right-radius: 12px;
+}
+.mac-calc-grid > .mac-calc-btn.zero {
+  border-bottom-left-radius: 12px;
 }
 
 /* Status Select */

@@ -9,19 +9,23 @@ import {
   X,
   FileText
 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
+import OfficialPayslipModal from '../../components/payroll/OfficialPayslipModal';
 import { employeePortalApi } from '../../services/employeePortalApi';
 
 const MyPayslips = () => {
+  const { employee } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [payslips, setPayslips] = useState([]);
   const [selectedPayslip, setSelectedPayslip] = useState(null);
   const [filters, setFilters] = useState({
-    year: new Date().getFullYear()
+    year: new Date().getFullYear(),
+    month: 'all'
   });
 
   useEffect(() => {
     fetchPayslips();
-  }, [filters]);
+  }, [filters.year]); // Only re-fetch on year change since month is just a client-side filter for mock
 
   const fetchPayslips = async () => {
     try {
@@ -67,6 +71,26 @@ const MyPayslips = () => {
     setSelectedPayslip(null);
   };
 
+  // Filter payslips based on selected month
+  const displayedPayslips = filters.month === 'all' 
+    ? payslips 
+    : payslips.filter(p => p.id === `${filters.year}-${filters.month}`);
+
+  const monthsList = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+
   return (
     <div className="page-container">
       {/* Header */}
@@ -77,22 +101,42 @@ const MyPayslips = () => {
         </div>
       </div>
 
-      {/* Year Filter */}
+      {/* Filters */}
       <div className="card" style={{ marginBottom: '16px' }}>
-        <div className="card-body" style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px' }}>
-          <Filter size={18} color="var(--text-secondary)" />
-          <span style={{ fontWeight: 500 }}>Year:</span>
-          <select 
-            className="input-control"
-            value={filters.year}
-            onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
-            style={{ width: '150px' }}
-          >
-            {Array.from({ length: 5 }, (_, i) => {
-              const year = new Date().getFullYear() - i;
-              return <option key={year} value={year}>{year}</option>;
-            })}
-          </select>
+        <div className="card-body" style={{ display: 'flex', gap: '24px', alignItems: 'center', padding: '16px' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={18} color="var(--text-secondary)" />
+            <span style={{ fontWeight: 500 }}>Month:</span>
+            <select 
+              className="input-control"
+              value={filters.month}
+              onChange={(e) => setFilters({ ...filters, month: e.target.value })}
+              style={{ width: '150px' }}
+            >
+              <option value="all">All Months</option>
+              {monthsList.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={18} color="var(--text-secondary)" />
+            <span style={{ fontWeight: 500 }}>Year:</span>
+            <select 
+              className="input-control"
+              value={filters.year}
+              onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
+              style={{ width: '120px' }}
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return <option key={year} value={year}>{year}</option>;
+              })}
+            </select>
+          </div>
+          
         </div>
       </div>
 
@@ -101,21 +145,21 @@ const MyPayslips = () => {
         <div style={{ textAlign: 'center', padding: '40px' }}>
           Loading payslips...
         </div>
-      ) : payslips.length === 0 ? (
+      ) : displayedPayslips.length === 0 ? (
         <div className="card">
           <div className="card-body">
             <div className="empty-state">
               <FileText size={48} className="empty-state-icon" />
               <h3 className="empty-state-title">No payslips found</h3>
               <p className="empty-state-desc">
-                No payslips available for {filters.year}
+                No payslips available for the selected period
               </p>
             </div>
           </div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
-          {payslips.map(payslip => (
+          {displayedPayslips.map(payslip => (
             <PayslipCard 
               key={payslip.id}
               payslip={payslip}
@@ -128,10 +172,10 @@ const MyPayslips = () => {
 
       {/* Payslip Detail Modal */}
       {selectedPayslip && (
-        <PayslipModal 
+        <OfficialPayslipModal 
           payslip={selectedPayslip}
+          employee={employee}
           onClose={closeModal}
-          onDownload={() => handleDownload(selectedPayslip.id)}
         />
       )}
     </div>
@@ -216,152 +260,6 @@ const PayslipCard = ({ payslip, onView, onDownload }) => {
             <Download size={16} />
             Download
           </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Payslip Detail Modal
-const PayslipModal = ({ payslip, onClose, onDownload }) => {
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px'
-    }} onClick={onClose}>
-      <div 
-        className="card"
-        style={{ 
-          maxWidth: '800px', 
-          width: '100%',
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 className="card-title">Payslip - {payslip.month}</h3>
-          <button className="icon-btn" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="card-body">
-          {/* Header Info */}
-          <div style={{ 
-            padding: '20px', 
-            backgroundColor: 'var(--bg-surface-hover)', 
-            borderRadius: '8px',
-            marginBottom: '24px'
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Pay Period
-                </div>
-                <div style={{ fontWeight: 600 }}>{payslip.period}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Pay Date
-                </div>
-                <div style={{ fontWeight: 600 }}>{payslip.payDate}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Working Days
-                </div>
-                <div style={{ fontWeight: 600 }}>{payslip.workingDays} days</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Earnings */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600 }}>Earnings</h4>
-            <table style={{ width: '100%', fontSize: '14px' }}>
-              <tbody>
-                {payslip.earnings.map((earning, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '12px 0', color: 'var(--text-secondary)' }}>
-                      {earning.component}
-                    </td>
-                    <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 500 }}>
-                      ₹{earning.amount.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-                <tr style={{ fontWeight: 600, fontSize: '15px' }}>
-                  <td style={{ padding: '12px 0' }}>Gross Earnings</td>
-                  <td style={{ padding: '12px 0', textAlign: 'right', color: 'var(--success-text)' }}>
-                    ₹{payslip.grossPay.toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Deductions */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600 }}>Deductions</h4>
-            <table style={{ width: '100%', fontSize: '14px' }}>
-              <tbody>
-                {payslip.deductions.map((deduction, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '12px 0', color: 'var(--text-secondary)' }}>
-                      {deduction.component}
-                    </td>
-                    <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 500, color: 'var(--danger)' }}>
-                      -₹{deduction.amount.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-                <tr style={{ fontWeight: 600, fontSize: '15px' }}>
-                  <td style={{ padding: '12px 0' }}>Total Deductions</td>
-                  <td style={{ padding: '12px 0', textAlign: 'right', color: 'var(--danger)' }}>
-                    -₹{payslip.totalDeductions.toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Net Pay */}
-          <div style={{ 
-            padding: '20px', 
-            backgroundColor: 'var(--success-bg)', 
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--success-text)' }}>
-              Net Pay
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--success-text)' }}>
-              ₹{payslip.netPay.toLocaleString()}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-            <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>
-              Close
-            </button>
-            <button className="btn btn-primary" onClick={onDownload} style={{ flex: 1 }}>
-              <Download size={18} />
-              Download PDF
-            </button>
-          </div>
         </div>
       </div>
     </div>

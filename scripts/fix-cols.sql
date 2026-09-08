@@ -1,0 +1,10 @@
+ALTER TABLE employees ADD COLUMN bank_name VARCHAR(100);
+ALTER TABLE employees ADD COLUMN account_number VARCHAR(50);
+ALTER TABLE employees ADD COLUMN ifsc_code VARCHAR(20);
+ALTER TABLE employees ADD COLUMN esi_percentage DECIMAL(5,2) DEFAULT 0.75;
+ALTER TABLE employees ADD COLUMN pf_percentage DECIMAL(5,2) DEFAULT 12.00;
+ALTER TABLE employees ADD COLUMN monthly_paid_leaves INT DEFAULT 2;
+ALTER TABLE employees ADD COLUMN special_allowance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN other_allowance DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN professional_tax DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE employees ADD COLUMN advances DECIMAL(10,2) DEFAULT 0;

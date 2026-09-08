@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Search, AlertCircle, Clock, CheckSquare, 
-  Users, CheckCircle, XCircle, Download, ChevronDown, 
+  Users, CheckCircle, XCircle, Download, 
   Eye, Filter, X
 } from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
 import api from '../../services/api';
 import AttendanceEmployeeDashboard from './AttendanceEmployeeDashboard';
+import AttendanceIssuesView from './AttendanceIssuesView';
 import './AttendanceDashboard.css';
 import './Attendance.css';
 
@@ -165,6 +166,16 @@ const AttendanceOverview = () => {
     );
   }
 
+  // If an issue is selected for review, show the full page AttendanceIssuesView
+  if (activeModal) {
+    return (
+      <AttendanceIssuesView 
+        activeTab={activeModal} 
+        onBack={closeModal} 
+      />
+    );
+  }
+
   return (
     <div className="attendance-dashboard">
       
@@ -224,9 +235,9 @@ const AttendanceOverview = () => {
           </div>
         </div>
         <div className={`att-kpi-card clickable ${statusFilter === 'leave' ? 'active-filter' : ''}`} onClick={() => handleKpiClick('leave')}>
-          <div className="att-kpi-icon bg-purple"><Calendar size={20} color="#8b5cf6" /></div>
-          <div>
-            <div className="att-kpi-label">On Leave</div>
+          <div className="att-kpi-icon bg-purple" style={{ flexShrink: 0 }}><Calendar size={20} color="#8b5cf6" /></div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="att-kpi-label" style={{ whiteSpace: 'nowrap' }}>On Leave</div>
             <div className="att-kpi-value">{metrics.onLeave}</div>
             <div className="att-kpi-pct text-purple">{leavePct}%</div>
           </div>
@@ -269,8 +280,14 @@ const AttendanceOverview = () => {
 
         {/* Attendance Issues Panel */}
         <div className="att-panel">
-          <div className="att-panel-header">
+          <div className="att-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>Attendance Issues</h3>
+            <button 
+              onClick={() => handleIssueClick({ id: 'unapproved_absence' })}
+              style={{ color: '#2563eb', background: 'none', border: 'none', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            >
+              View All
+            </button>
           </div>
           <div className="att-issues-list">
             {issues.map((issue, idx) => (
@@ -293,31 +310,6 @@ const AttendanceOverview = () => {
           </div>
         </div>
 
-        {/* This Month Overview Panel */}
-        <div className="att-panel">
-          <div className="att-panel-header">
-            <h3>This Month Overview</h3>
-            <button className="att-dropdown">This Month <ChevronDown size={14} /></button>
-          </div>
-          <div className="att-progress-list">
-            <div className="att-progress-item">
-              <div className="att-prog-text"><span>Average Attendance</span><span>89.2%</span></div>
-              <div className="att-prog-bar"><div className="att-prog-fill bg-green" style={{width: '89.2%'}}></div></div>
-            </div>
-            <div className="att-progress-item">
-              <div className="att-prog-text"><span>Average Late</span><span>3.6%</span></div>
-              <div className="att-prog-bar"><div className="att-prog-fill bg-yellow" style={{width: '15%'}}></div></div>
-            </div>
-            <div className="att-progress-item">
-              <div className="att-prog-text"><span>Average Absence</span><span>5.2%</span></div>
-              <div className="att-prog-bar"><div className="att-prog-fill bg-red" style={{width: '25%'}}></div></div>
-            </div>
-            <div className="att-progress-item">
-              <div className="att-prog-text"><span>Overtime Hours</span><span>142h 30m</span></div>
-              <div className="att-prog-bar"><div className="att-prog-fill bg-purple" style={{width: '60%'}}></div></div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Table Section */}
@@ -438,61 +430,6 @@ const AttendanceOverview = () => {
           </table>
         </div>
       </div>
-
-      {activeModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{selectedIssue?.title}</h2>
-              <button className="icon-btn" onClick={closeModal}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              {activeModal === 'missing_checkout' && selectedIssue && (
-                <div>
-                  <p>Employee <strong>Sarah Jenkins</strong> forgot to check out on {date}.</p>
-                  <ul className="modal-details-list">
-                    <li><strong>Check-in:</strong> 09:10 AM</li>
-                    <li><strong>Expected Check-out:</strong> 06:00 PM</li>
-                  </ul>
-                  <div className="modal-actions-row">
-                    <button className="btn btn-primary">Mark Check-out</button>
-                    <button className="btn btn-secondary">Edit Attendance</button>
-                    <button className="btn btn-danger">Dismiss</button>
-                  </div>
-                </div>
-              )}
-              {activeModal === 'correction' && (
-                <div>
-                  <p>Employee <strong>Michael Chen</strong> requested a correction for {date}.</p>
-                  <ul className="modal-details-list">
-                    <li><strong>Original:</strong> Absent</li>
-                    <li><strong>Requested:</strong> Present (Forgot to punch)</li>
-                    <li><strong>Reason:</strong> "I was at a client meeting all morning."</li>
-                  </ul>
-                  <div className="modal-actions-row">
-                    <button className="btn btn-primary">Approve Request</button>
-                    <button className="btn btn-danger">Reject</button>
-                  </div>
-                </div>
-              )}
-              {activeModal === 'unapproved_absence' && (
-                <div>
-                  <p>Employee <strong>Jane Doe</strong> has an unapproved absence on {date}.</p>
-                  <p style={{color: '#64748b', fontSize: '13px', marginTop: '10px'}}>
-                    No attendance punch or leave request found for this day.
-                  </p>
-                  <div className="modal-actions-row">
-                    <button className="btn btn-danger">Mark Absent (LWP)</button>
-                    <button className="btn btn-secondary">Add Leave</button>
-                    <button className="btn" style={{color: '#2563eb'}}>View Details</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

@@ -183,7 +183,7 @@
 
 .att-stat-box {
   border-radius: 8px;
-  padding: 12px 8px;
+  padding: 8px 4px;
   text-align: center;
   border: none;
 }
@@ -206,7 +206,7 @@
 }
 
 .att-stat-val {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   margin-bottom: 2px;
 }
@@ -247,7 +247,7 @@
 }
 
 .calendar-day {
-  height: 48px;
+  height: 36px;
   border-bottom: 1px solid #f1f5f9;
   border-right: 1px solid #f1f5f9;
   display: flex;
@@ -293,7 +293,7 @@
 
 .recent-logs-table th {
   text-align: left;
-  padding: 8px 4px;
+  padding: 12px 16px;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -302,7 +302,7 @@
 }
 
 .recent-logs-table td {
-  padding: 10px 4px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--surface-hover);
   color: var(--text-secondary);
 }
@@ -314,7 +314,7 @@
 /* Quick Actions */
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 8px;
 }
 
@@ -324,14 +324,14 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 12px;
+  padding: 8px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
 }
 

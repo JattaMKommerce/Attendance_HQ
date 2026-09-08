@@ -13,6 +13,7 @@ import PlatformDashboard from './pages/platform/PlatformDashboard';
 import EmployeeList from './pages/employees/EmployeeList';
 import AddEmployee from './pages/employees/AddEmployee';
 import EmployeeProfile from './pages/employees/EmployeeProfile';
+import IdCardStandaloneView from './pages/employees/IdCardStandaloneView';
 
 import Attendance from './pages/attendance/Attendance';
 import Leave from './pages/leave/Leave';
@@ -45,6 +46,18 @@ import SalaryStructures from './pages/payroll/SalaryStructures';
 import Adjustments from './pages/payroll/Adjustments';
 import PayrollSettings from './pages/payroll/PayrollSettings';
 
+// Operations
+import Assets from './pages/operations/Assets';
+import Offboarding from './pages/operations/Offboarding';
+
+// Employee Lifecycle
+import Probation from './pages/lifecycle/Probation';
+import PerformancePIP from './pages/lifecycle/PerformancePIP';
+import EmployeeActions from './pages/lifecycle/EmployeeActions';
+import EmployeeRelations from './pages/lifecycle/EmployeeRelations';
+import Separation from './pages/lifecycle/Separation';
+import FinalSettlement from './pages/lifecycle/FinalSettlement';
+
 // Placeholders
 import Placeholder from './pages/placeholders/Placeholder';
 
@@ -64,7 +77,6 @@ const mapPlaceholderRoutes = (routes, base) => {
 
 const appPlaceholders = [
   { path: 'incentives', title: 'Incentives' },
-  { path: 'assets', title: 'Assets' },
   { path: 'expenses', title: 'Expenses' },
   { path: 'documents', title: 'Documents' },
   { path: 'ai', title: 'AI Assistant' },
@@ -121,6 +133,9 @@ const AppRoutes = () => {
 
       {/* Organization Routes */}
       <Route element={<ProtectedRoute allowedRoles={['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE']} />}>
+        {/* Standalone ID Card View (outside AppShell) */}
+        <Route path="/app/employees/:id/id-card" element={<IdCardStandaloneView />} />
+        
         <Route path="/app" element={<AppShell />}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeList />} />
@@ -142,6 +157,16 @@ const AppRoutes = () => {
           <Route path="recruitment" element={<Recruitment />} />
           <Route path="onboarding" element={<Onboarding />} />
           <Route path="performance" element={<Performance />} />
+          <Route path="assets" element={<Assets />} />
+          <Route path="offboarding" element={<Offboarding />} />
+          
+          {/* Employee Lifecycle */}
+          <Route path="lifecycle/probation" element={<Probation />} />
+          <Route path="lifecycle/performance" element={<PerformancePIP />} />
+          <Route path="lifecycle/actions" element={<EmployeeActions />} />
+          <Route path="lifecycle/relations" element={<EmployeeRelations />} />
+          <Route path="lifecycle/separation" element={<Separation />} />
+          <Route path="lifecycle/settlement" element={<FinalSettlement />} />
           
           {/* Employee Portal Routes */}
           <Route path="employee/dashboard" element={<EmployeeDashboard />} />

@@ -110,8 +110,9 @@ class EmployeeService {
           organization_id, employee_code, first_name, last_name, email, phone, 
           gender, blood_group, date_of_birth, joining_date, employment_type, department_id, designation_id, status,
           profile_image_url, experience_type, terms_accepted, terms_accepted_at,
-          current_address, permanent_address, uan_number, resume_url, gross_salary, basic_salary, hra, deductions
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          current_address, permanent_address, uan_number, resume_url, gross_salary, basic_salary, hra, deductions,
+          office_state, office_city
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           organizationId,
           data.employee_code.trim(),
@@ -138,7 +139,9 @@ class EmployeeService {
           data.gross_salary || null,
           data.basic_salary || null,
           data.hra || null,
-          data.deductions || null
+          data.deductions || null,
+          data.office_state || null,
+          data.office_city || null
         ]
       );
 
@@ -268,7 +271,9 @@ class EmployeeService {
           other_allowance = COALESCE(?, other_allowance),
           professional_tax = COALESCE(?, professional_tax),
           advances = COALESCE(?, advances),
-          incentives = COALESCE(?, incentives)
+          incentives = COALESCE(?, incentives),
+          office_state = COALESCE(?, office_state),
+          office_city = COALESCE(?, office_city)
         WHERE id = ? AND organization_id = ?`,
         [
           data.first_name?.trim() || null,
@@ -302,6 +307,8 @@ class EmployeeService {
           data.professional_tax || null,
           data.advances || null,
           data.incentives || null,
+          data.office_state || null,
+          data.office_city || null,
           employeeId,
           organizationId
         ]

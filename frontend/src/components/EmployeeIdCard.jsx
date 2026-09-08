@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { State } from 'country-state-city';
 import './EmployeeIdCard.css';
 
 const EmployeeIdCard = ({ employee }) => {
@@ -9,11 +10,11 @@ const EmployeeIdCard = ({ employee }) => {
     ? new Date(employee.joining_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : '';
 
-  const qrData = JSON.stringify({
-    id: employee.employee_code,
-    name: `${employee.first_name} ${employee.last_name}`,
-    department: employee.department_name
-  });
+  const qrData = `${window.location.origin}/app/employees/${employee.id}/id-card`;
+  
+  const locationString = employee.office_city && employee.office_state 
+    ? `${employee.office_city}, ${State.getStateByCodeAndCountry(employee.office_state, 'IN')?.name || employee.office_state}`
+    : '-';
 
   return (
     <div className="id-card-container">
@@ -78,6 +79,11 @@ const EmployeeIdCard = ({ employee }) => {
             <span className="detail-label">Blood Group</span>
             <span className="detail-separator">:</span>
             <span className="detail-value">{employee.blood_group || '-'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Location</span>
+            <span className="detail-separator">:</span>
+            <span className="detail-value">{locationString}</span>
           </div>
           <div className="detail-row">
             <span className="detail-label">Date of Joining</span>

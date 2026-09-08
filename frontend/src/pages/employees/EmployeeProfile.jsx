@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon } from 'lucide-react';
 import { getEmployeeById, updateEmployee, getLookups } from '../../services/employeeApi';
-import api from '../../services/api';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
+import { State, City } from 'country-state-city';
 import '../../styles/components.css';
 
 
@@ -32,7 +32,6 @@ const EmployeeProfile = () => {
         if (fetchedData.date_of_birth) fetchedData.date_of_birth = fetchedData.date_of_birth.split('T')[0];
         if (fetchedData.joining_date) fetchedData.joining_date = fetchedData.joining_date.split('T')[0];
         setFormData(fetchedData);
-        fetchIdCard(res.data.id);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch employee details');
@@ -148,7 +147,7 @@ const EmployeeProfile = () => {
             
             <div className="profile-meta-grid">
                <div className="profile-meta-item"><Briefcase size={16} /> {employee.department_name || 'No Department'}</div>
-               <div className="profile-meta-item"><MapPin size={16} /> Mumbai, India</div>
+               <div className="profile-meta-item"><MapPin size={16} /> {employee.office_city && employee.office_state ? `${employee.office_city}, ${State.getStateByCodeAndCountry(employee.office_state, 'IN')?.name || employee.office_state}` : 'Not set'}</div>
                <div className="profile-meta-item"><CalendarIcon size={16} /> Joined {joinDate}</div>
                <div className="profile-meta-item"><Mail size={16} /> {employee.email}</div>
                <div className="profile-meta-item"><Phone size={16} /> {employee.phone || '+91 -'}</div>
@@ -216,6 +215,28 @@ const EmployeeProfile = () => {
                        <div className="input-group"><label className="input-label">Designation</label>
                          <select name="designation_id" className="input-control" value={formData.designation_id || ''} onChange={handleChange} disabled={!editMode}>
                            <option value="">Select Designation</option>{lookups.designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                         </select>
+                       </div>
+                     </div>
+                   </div>
+
+                   <div className="card" style={{ marginBottom: '24px' }}>
+                     <div className="card-header"><h3 className="card-title">Office Location</h3></div>
+                     <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                       <div className="input-group">
+                         <label className="input-label">State</label>
+                         <select name="office_state" className="input-control" value={formData.office_state || ''} onChange={(e) => {
+                           setFormData(prev => ({ ...prev, office_state: e.target.value, office_city: '' }));
+                         }} disabled={!editMode}>
+                           <option value="">Select State</option>
+                           {State.getStatesOfCountry('IN').map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
+                         </select>
+                       </div>
+                       <div className="input-group">
+                         <label className="input-label">City</label>
+                         <select name="office_city" className="input-control" value={formData.office_city || ''} onChange={handleChange} disabled={!editMode || !formData.office_state}>
+                           <option value="">Select City</option>
+                           {formData.office_state && City.getCitiesOfState('IN', formData.office_state).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                          </select>
                        </div>
                      </div>

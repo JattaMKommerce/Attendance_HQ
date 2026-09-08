@@ -9,9 +9,17 @@ coverage/
 
 uploads/*
 !uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/**/.gitkeep
+backend/uploads/**/*
 
 .DS_Store
 *.log
+backend/test-*.js
+backend/check-*.js
+backend/crash-test.js
+backend/get-*.js
+
 
 .vscode/
 .idea/

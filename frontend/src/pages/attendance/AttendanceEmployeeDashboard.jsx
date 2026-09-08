@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, ChevronLeft, ChevronRight, Clock, Umbrella, FileText, Mail, CheckSquare } from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
 import { getEmployeeById } from '../../services/employeeApi';
 import api from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
+import OfficialPayslipModal from '../../components/payroll/OfficialPayslipModal';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
 
 const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
@@ -210,7 +212,7 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
       </div>
 
       {/* Left Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
         <div className="profile-widget" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="widget-header" style={{ padding: '12px 16px 0', marginBottom: 0 }}>
             <h3 className="widget-title" style={{ fontSize: '14px', margin: 0 }}>Employee ID Card</h3>
@@ -235,8 +237,8 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
       </div>
 
       {/* Middle Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className="profile-widget" style={{ flex: 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+        <div className="profile-widget">
           <div className="widget-header" style={{ marginBottom: '20px' }}>
             <h3 className="widget-title">Attendance Calendar</h3>
           </div>
@@ -275,10 +277,54 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
             </div>
           </div>
         </div>
+
+        <div className="profile-widget" style={{ padding: '16px' }}>
+          <div className="widget-header" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 className="widget-title" style={{ fontSize: '15px' }}>Recent Attendance Logs</h3>
+            <button style={{ color: '#f43f5e', background: 'none', border: 'none', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>View All</button>
+          </div>
+          {logsList.length > 0 ? (
+            <div style={{ border: '1px solid #f1f5f9', borderRadius: '8px', overflowX: 'auto' }}>
+              <table className="recent-logs-table">
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    <th style={{ paddingLeft: '12px', borderBottom: 'none' }}>DATE</th>
+                    <th style={{ borderBottom: 'none' }}>DAY</th>
+                    <th style={{ borderBottom: 'none' }}>CHECK IN</th>
+                    <th style={{ borderBottom: 'none' }}>CHECK OUT</th>
+                    <th style={{ borderBottom: 'none' }}>HOURS</th>
+                    <th style={{ paddingRight: '12px', borderBottom: 'none' }}>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logsList.reverse().slice(0, 5).map(log => (
+                    <tr key={log.id}>
+                      <td style={{ paddingLeft: '12px', whiteSpace: 'nowrap' }}>{log.dateObj.getDate()} {monthNames[log.dateObj.getMonth()].slice(0, 3)} {log.dateObj.getFullYear()}</td>
+                      <td>{log.dateObj.toLocaleString('default', { weekday: 'short' })}</td>
+                      <td>{log.check_in_time ? (() => { const parts = log.check_in_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : '—'}</td>
+                      <td>{log.check_out_time ? (() => { const parts = log.check_out_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : '—'}</td>
+                      <td>{log.work_duration_minutes ? `${Math.floor(log.work_duration_minutes/60)}h ${String(log.work_duration_minutes%60).padStart(2, '0')}m` : '—'}</td>
+                      <td style={{ paddingRight: '12px' }}>
+                        <span className={`status-pill active`} style={{ 
+                          background: log.computedStatus === 'present' ? '#d1fae5' : log.computedStatus === 'late' ? '#fef3c7' : log.computedStatus === 'holiday' ? '#f1f5f9' : '#fee2e2', 
+                          color: log.computedStatus === 'present' ? '#10b981' : log.computedStatus === 'late' ? '#d97706' : log.computedStatus === 'holiday' ? '#475569' : '#ef4444' 
+                        }}>
+                          {log.computedStatus ? log.computedStatus.charAt(0).toUpperCase() + log.computedStatus.slice(1) : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>No recent logs found.</div>
+          )}
+        </div>
       </div>
 
       {/* Right Column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
         <div className="profile-widget">
           <div className="widget-header">
             <h3 className="widget-title">Attendance Summary ({monthNames[currentMonth].slice(0, 3)} {currentYear})</h3>
@@ -317,7 +363,7 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
             </div>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '4px' }}>Total Working Days</div>
               <div style={{ fontSize: '20px', fontWeight: 700 }}>{daysInMonth - stats.holiday}</div>
@@ -327,44 +373,6 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
               <div style={{ fontSize: '24px', fontWeight: 700, color: '#10b981' }}>{displayRate}%</div>
             </div>
           </div>
-        </div>
-
-        <div className="profile-widget">
-          <div className="widget-header">
-            <h3 className="widget-title">Recent Attendance Logs</h3>
-          </div>
-          {logsList.length > 0 ? (
-            <table className="recent-logs-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Day</th>
-                  <th>Check In</th>
-                  <th>Check Out</th>
-                  <th>Hours</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logsList.reverse().slice(0, 5).map(log => (
-                  <tr key={log.id}>
-                    <td>{log.dateObj.getDate()} {monthNames[log.dateObj.getMonth()].slice(0, 3)} {log.dateObj.getFullYear()}</td>
-                    <td>{log.dateObj.toLocaleString('default', { weekday: 'short' })}</td>
-                    <td>{log.check_in_time || '—'}</td>
-                    <td>{log.check_out_time || '—'}</td>
-                    <td>{log.work_duration_minutes ? `${Math.floor(log.work_duration_minutes/60)}h ${log.work_duration_minutes%60}m` : '—'}</td>
-                    <td>
-                      <span className={`status-pill active`} style={{ background: log.computedStatus === 'present' ? '#d1fae5' : log.computedStatus === 'late' ? '#fef3c7' : '#fee2e2', color: log.computedStatus === 'present' ? '#10b981' : log.computedStatus === 'late' ? '#d97706' : '#ef4444' }}>
-                        {log.computedStatus ? log.computedStatus.charAt(0).toUpperCase() + log.computedStatus.slice(1) : '—'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>No recent logs found.</div>
-          )}
         </div>
 
         <div className="profile-widget">
@@ -427,86 +435,10 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
 
       {/* Payslip Modal */}
       {showPayslipModal && (
-        <div className="modal-overlay" onClick={() => setShowPayslipModal(false)} style={{ zIndex: 2000 }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', padding: '0' }}>
-            <div className="modal-header" style={{ padding: '24px 24px 16px', borderBottom: '1px solid #e2e8f0' }}>
-              <div>
-                <h2 style={{ margin: '0 0 4px', fontSize: '20px' }}>Payslip - {monthNames[currentMonth]} {currentYear}</h2>
-                <div style={{ color: '#64748b', fontSize: '13px' }}>{employee?.first_name} {employee?.last_name} | {employee?.designation_name}</div>
-              </div>
-              <button className="icon-btn" onClick={() => setShowPayslipModal(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ padding: '24px', backgroundColor: '#f8fafc' }}>
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                  <div>
-                     <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>Total Working Days</div>
-                     <div style={{ fontWeight: 600 }}>{daysInMonth} days</div>
-                  </div>
-                  <div>
-                     <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '4px' }}>LWP (Leave Without Pay)</div>
-                     <div style={{ fontWeight: 600 }}>{stats.absent} days</div>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                   {/* Earnings Placeholder */}
-                   <div>
-                     <h4 style={{ margin: '0 0 12px', fontSize: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Earnings</h4>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#475569' }}>Basic Salary</span>
-                        <span style={{ fontWeight: 500 }}>₹45,000</span>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#475569' }}>HRA</span>
-                        <span style={{ fontWeight: 500 }}>₹15,000</span>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#475569' }}>Special Allowance</span>
-                        <span style={{ fontWeight: 500 }}>₹10,000</span>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginTop: '16px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontWeight: 600 }}>
-                        <span>Total Earnings</span>
-                        <span style={{ color: '#10b981' }}>₹70,000</span>
-                     </div>
-                   </div>
-
-                   {/* Deductions Placeholder */}
-                   <div>
-                     <h4 style={{ margin: '0 0 12px', fontSize: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Deductions</h4>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#475569' }}>PF</span>
-                        <span style={{ fontWeight: 500 }}>₹1,800</span>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#475569' }}>Professional Tax</span>
-                        <span style={{ fontWeight: 500 }}>₹200</span>
-                     </div>
-                     {stats.absent > 0 && (
-                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                          <span style={{ color: '#ef4444' }}>Unpaid Leave ({stats.absent}d)</span>
-                          <span style={{ fontWeight: 500, color: '#ef4444' }}>₹{(stats.absent * 2333).toFixed(0)}</span>
-                       </div>
-                     )}
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginTop: '16px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontWeight: 600 }}>
-                        <span>Total Deductions</span>
-                        <span style={{ color: '#ef4444' }}>₹{2000 + (stats.absent * 2333)}</span>
-                     </div>
-                   </div>
-                </div>
-
-                <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   <span style={{ fontSize: '16px', fontWeight: 600 }}>Net Payable</span>
-                   <span style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>₹{(70000 - 2000 - (stats.absent * 2333)).toLocaleString()}</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button className="btn btn-secondary" onClick={() => setShowPayslipModal(false)}>Close</button>
-                <button className="btn btn-primary"><Download size={16} /> Download PDF</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OfficialPayslipModal 
+          employee={employee} 
+          onClose={() => setShowPayslipModal(false)}
+        />
       )}
     </div>
   );

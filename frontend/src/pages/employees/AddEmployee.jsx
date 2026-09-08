@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, IndianRupee, Building2 } from 'lucide-react';
 import { createEmployee, getLookups, uploadPhoto, uploadDocument, uploadResume } from '../../services/employeeApi';
+import { State, City } from 'country-state-city';
 import FileUploader from '../../components/common/FileUploader';
 import '../../styles/components.css';
 
@@ -58,6 +59,7 @@ const AddEmployee = () => {
     emergency_contact_name: '', emergency_contact_phone: '',
     uan_number: '', experience_type: 'fresher',
     terms_accepted: false, profile_image_url: null, resume_url: null,
+    office_state: '', office_city: '',
     experiences: [], education: [], documents: [],
     ...defaultSalary, ...defaultBank
   });
@@ -157,7 +159,7 @@ const AddEmployee = () => {
     if (!formData.terms_accepted) { setError('You must accept the terms and conditions.'); setLoading(false); return; }
     try {
       const payload = { ...formData };
-      ['department_id', 'designation_id', 'gender', 'blood_group'].forEach(k => { if (!payload[k]) payload[k] = null; });
+      ['department_id', 'designation_id', 'gender', 'blood_group', 'office_state', 'office_city'].forEach(k => { if (!payload[k]) payload[k] = null; });
       if (payload.experience_type === 'fresher') payload.experiences = [];
       const res = await createEmployee(payload);
       if (res.success) navigate(`/app/employees/${res.data.id}`);
@@ -264,6 +266,29 @@ const AddEmployee = () => {
             <div className="input-group"><label className="input-label">Experience Type *</label>
               <select name="experience_type" className="input-control" value={formData.experience_type} onChange={handleChange} required>
                 <option value="fresher">Fresher</option><option value="experienced">Experienced</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Office Location */}
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header"><h3 className="card-title">Office Location</h3></div>
+          <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="input-group">
+              <label className="input-label">State</label>
+              <select name="office_state" className="input-control" value={formData.office_state} onChange={(e) => {
+                setFormData(prev => ({ ...prev, office_state: e.target.value, office_city: '' }));
+              }}>
+                <option value="">Select State</option>
+                {State.getStatesOfCountry('IN').map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="input-label">City</label>
+              <select name="office_city" className="input-control" value={formData.office_city} onChange={handleChange} disabled={!formData.office_state}>
+                <option value="">Select City</option>
+                {formData.office_state && City.getCitiesOfState('IN', formData.office_state).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
             </div>
           </div>
