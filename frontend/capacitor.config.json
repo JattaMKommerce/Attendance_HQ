@@ -1,0 +1,32 @@
+{
+  "appId": "com.jattamkommerce.hrms",
+  "appName": "JMK HRMS",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#0f172a",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#0f172a",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    }
+  }
+}

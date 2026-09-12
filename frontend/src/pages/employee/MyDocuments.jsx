@@ -3,12 +3,14 @@ import {
   FileText, 
   Upload, 
   Download, 
-  Eye,
-  Trash2,
-  Plus,
-  X,
-  AlertCircle,
-  CheckCircle
+  Eye, 
+  Trash2, 
+  Plus, 
+  X, 
+  AlertCircle, 
+  CheckCircle,
+  RefreshCw,
+  FolderOpen
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
 
@@ -17,330 +19,295 @@ const MyDocuments = () => {
   const [documents, setDocuments] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadData, setUploadData] = useState({
-    documentType: '',
-    file: null,
-    remarks: ''
+    title: '',
+    documentType: 'id_proof',
+    file: null
   });
   const [uploading, setUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      
-      // In production:
-      // const response = await employeePortalApi.getMyDocuments();
-      // setDocuments(response.data.documents);
-      
-      // Mock data
-      const mockDocuments = [
-        {
-          id: 1,
-          documentType: 'Resume',
-          fileName: 'resume_2026.pdf',
-          fileSize: '245 KB',
-          uploadedDate: '2026-01-15',
-          status: 'verified',
-          remarks: 'Updated resume'
-        },
-        {
-          id: 2,
-          documentType: 'Educational Certificate',
-          fileName: 'degree_certificate.pdf',
-          fileSize: '1.2 MB',
-          uploadedDate: '2026-01-10',
-          status: 'verified',
-          remarks: ''
-        },
-        {
-          id: 3,
-          documentType: 'Address Proof',
-          fileName: 'aadhar_card.pdf',
-          fileSize: '450 KB',
-          uploadedDate: '2026-01-05',
-          status: 'pending',
-          remarks: 'Submitted for verification'
-        },
-        {
-          id: 4,
-          documentType: 'Experience Letter',
-          fileName: 'previous_company_letter.pdf',
-          fileSize: '180 KB',
-          uploadedDate: '2025-12-20',
-          status: 'verified',
-          remarks: ''
-        }
-      ];
-      
-      setDocuments(mockDocuments);
+      setError(null);
+      const res = await employeePortalApi.getMyDocuments();
+      if (res.data?.success) {
+        setDocuments(res.data.data || []);
+      }
     } catch (err) {
       console.error('Error fetching documents:', err);
-      setError('Failed to load documents');
+      setError('Unable to load employee documents.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         setError('File size should not exceed 10MB');
         return;
       }
-      
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Only PDF, JPG, and PNG files are allowed');
-        return;
-      }
-      
-      setUploadData(prev => ({ ...prev, file }));
+      setUploadData(prev => ({ 
+        ...prev, 
+        file, 
+        title: prev.title || file.name.replace(/\.[^/.]+$/, "") 
+      }));
       setError(null);
     }
   };
 
-  const handleUpload = async (e) => {
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!uploadData.documentType) {
-      setError('Please select document type');
-      return;
-    }
-    
     if (!uploadData.file) {
       setError('Please select a file to upload');
       return;
     }
-    
+
     try {
       setUploading(true);
       setError(null);
-      
-      // In production:
-      // const formData = new FormData();
-      // formData.append('documentType', uploadData.documentType);
-      // formData.append('file', uploadData.file);
-      // formData.append('remarks', uploadData.remarks);
-      // await employeePortalApi.uploadMyDocument(formData);
-      
-      // Mock success
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSuccess('Document uploaded successfully!');
-      setShowUploadModal(false);
-      setUploadData({ documentType: '', file: null, remarks: '' });
-      
-      // Refresh documents list
-      fetchDocuments();
-      
-      setTimeout(() => setSuccess(null), 3000);
+
+      const formData = new FormData();
+      formData.append('document', uploadData.file);
+      formData.append('title', uploadData.title.trim());
+      formData.append('documentType', uploadData.documentType);
+
+      const res = await employeePortalApi.uploadMyDocument(formData);
+      if (res.data?.success) {
+        setSuccess('Document uploaded successfully!');
+        setShowUploadModal(false);
+        setUploadData({ title: '', documentType: 'id_proof', file: null });
+        await fetchDocuments();
+        setTimeout(() => setSuccess(null), 4000);
+      }
     } catch (err) {
-      console.error('Error uploading document:', err);
+      console.error('Upload error:', err);
       setError(err.response?.data?.message || 'Failed to upload document');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDownload = async (documentId, fileName) => {
+  const handleDownload = async (doc) => {
     try {
-      // In production:
-      // const response = await employeePortalApi.downloadMyDocument(documentId);
-      // const blob = new Blob([response.data]);
-      // const url = window.URL.createObjectURL(blob);
-      // const link = document.createElement('a');
-      // link.href = url;
-      // link.download = fileName;
-      // link.click();
-      // window.URL.revokeObjectURL(url);
-      
-      alert('Download functionality will be connected to backend API');
+      setDownloadingId(doc.id);
+      const res = await employeePortalApi.downloadMyDocument(doc.id);
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.title || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Error downloading document:', err);
-      setError('Failed to download document');
+      console.error('Download error:', err);
+      alert('Failed to download document. Please try again.');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
-  const handleDelete = async (documentId) => {
-    if (!window.confirm('Are you sure you want to delete this document?')) return;
-    
-    try {
-      // In production: await employeePortalApi.deleteMyDocument(documentId);
-      
-      alert('Delete functionality will be connected to backend API');
-      fetchDocuments();
-    } catch (err) {
-      console.error('Error deleting document:', err);
-      setError('Failed to delete document');
-    }
+  const formatDocType = (type) => {
+    const map = {
+      id_proof: 'ID Proof',
+      resume: 'Resume / CV',
+      contract: 'Employment Contract',
+      educational: 'Educational Degree',
+      certificate: 'Certification',
+      other: 'General Document'
+    };
+    return map[type] || type || 'Document';
   };
-
-  const documentTypes = [
-    'Resume',
-    'Educational Certificate',
-    'Experience Letter',
-    'Address Proof',
-    'PAN Card',
-    'Aadhaar Card',
-    'Passport',
-    'Driving License',
-    'Bank Statement',
-    'Medical Certificate',
-    'Other'
-  ];
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
-      <div className="page-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="page-title">My Documents</h1>
-          <p className="page-description">Upload and manage your personal documents</p>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
+            My Documents
+          </h1>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            Manage and view your official employee files and certificates
+          </p>
         </div>
-        <div className="page-actions">
-          <button 
-            className="btn btn-primary"
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={fetchDocuments}
+            style={{
+              background: 'none',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              fontSize: '13px',
+              color: '#334155',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <button
             onClick={() => setShowUploadModal(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+            }}
           >
             <Plus size={16} />
-            Upload Document
+            <span>Upload Document</span>
           </button>
         </div>
       </div>
 
-      {/* Success/Error Messages */}
+      {/* Messages */}
       {success && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: 'var(--success-bg)',
-          color: 'var(--success-text)',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <CheckCircle size={18} />
-          {success}
+        <div style={{ padding: '12px 16px', backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle size={16} />
+          <span>{success}</span>
         </div>
       )}
 
       {error && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: 'var(--danger-bg)',
-          color: 'var(--danger)',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <AlertCircle size={18} />
-          {error}
+        <div style={{ padding: '12px 16px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Info Banner */}
-      <div className="card" style={{ marginBottom: '24px', backgroundColor: 'var(--info-bg)' }}>
-        <div className="card-body" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', gap: '12px', color: 'var(--info-text)' }}>
-            <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div style={{ fontSize: '14px' }}>
-              <strong>Document Guidelines:</strong>
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                <li>Accepted formats: PDF, JPG, PNG</li>
-                <li>Maximum file size: 10MB</li>
-                <li>Documents will be verified by HR team</li>
-                <li>Keep your documents up to date</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Documents List */}
+      {/* Content */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          Loading documents...
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+          Loading your documents...
         </div>
       ) : documents.length === 0 ? (
-        <div className="card">
-          <div className="card-body">
-            <div className="empty-state">
-              <FileText size={48} className="empty-state-icon" />
-              <h3 className="empty-state-title">No documents uploaded</h3>
-              <p className="empty-state-desc">
-                Upload your documents to keep your profile complete
-              </p>
-              <button 
-                className="btn btn-primary"
-                onClick={() => setShowUploadModal(true)}
-              >
-                <Plus size={16} />
-                Upload Document
-              </button>
-            </div>
+        <div style={{
+          textAlign: 'center',
+          padding: '48px 24px',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ width: '56px', height: '56px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <FolderOpen size={28} />
           </div>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>
+            No Documents Uploaded Yet
+          </h3>
+          <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#64748b', maxWidth: '420px', marginInline: 'auto' }}>
+            Upload copies of your national identity, academic certificates, signed offers, or work receipts.
+          </p>
+          <button
+            onClick={() => setShowUploadModal(true)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Upload First Document
+          </button>
         </div>
       ) : (
-        <div className="card">
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Document Type</th>
-                  <th>File Name</th>
-                  <th>Size</th>
-                  <th>Uploaded Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map(doc => (
-                  <tr key={doc.id}>
-                    <td style={{ fontWeight: 500 }}>{doc.documentType}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{doc.fileName}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{doc.fileSize}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
-                      {new Date(doc.uploadedDate).toLocaleDateString()}
-                    </td>
-                    <td>
-                      <StatusBadge status={doc.status} />
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          className="icon-btn"
-                          onClick={() => handleDownload(doc.id, doc.fileName)}
-                          title="Download"
-                        >
-                          <Download size={18} />
-                        </button>
-                        <button 
-                          className="icon-btn"
-                          onClick={() => handleDelete(doc.id)}
-                          title="Delete"
-                          style={{ color: 'var(--danger)' }}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                padding: '18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={22} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {doc.title}
+                    </h4>
+                    <span style={{
+                      backgroundColor: '#f1f5f9',
+                      color: '#475569',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      display: 'inline-block'
+                    }}>
+                      {formatDocType(doc.document_type)}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
+                  Uploaded on {new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                <button
+                  onClick={() => handleDownload(doc)}
+                  disabled={downloadingId === doc.id}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#f8fafc',
+                    color: '#0f172a',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Download size={14} />
+                  <span>{downloadingId === doc.id ? 'Downloading...' : 'Download File'}</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -352,146 +319,154 @@ const MyDocuments = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(3px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }} onClick={() => !uploading && setShowUploadModal(false)}>
-          <div 
-            className="card"
-            style={{ maxWidth: '500px', width: '100%' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="card-title">Upload Document</h3>
-              <button 
-                className="icon-btn" 
-                onClick={() => !uploading && setShowUploadModal(false)}
-                disabled={uploading}
+          padding: '16px',
+          zIndex: 1000
+        }} onClick={() => setShowUploadModal(false)}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '480px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            overflow: 'hidden'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600, color: '#0f172a' }}>
+                Upload New Document
+              </h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleUpload}>
-              <div className="card-body">
-                {/* Document Type */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                    Document Type <span style={{ color: 'var(--danger)' }}>*</span>
-                  </label>
-                  <select
-                    className="input-control"
-                    value={uploadData.documentType}
-                    onChange={(e) => setUploadData(prev => ({ ...prev, documentType: e.target.value }))}
-                    required
-                    style={{ width: '100%' }}
-                  >
-                    <option value="">Select document type</option>
-                    {documentTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* File Upload */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                    Select File <span style={{ color: 'var(--danger)' }}>*</span>
-                  </label>
-                  <div style={{
-                    border: '2px dashed var(--border-color)',
+            <form onSubmit={handleUploadSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Document Title *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Passport Copy or Degree Certificate"
+                  value={uploadData.title}
+                  onChange={(e) => setUploadData(prev => ({ ...prev, title: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
                     borderRadius: '8px',
-                    padding: '24px',
-                    textAlign: 'center',
-                    backgroundColor: 'var(--bg-surface-hover)'
-                  }}>
-                    <Upload size={32} style={{ color: 'var(--text-secondary)', marginBottom: '8px' }} />
-                    <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>
-                      {uploadData.file ? uploadData.file.name : 'Choose a file to upload'}
-                    </p>
-                    <input
-                      type="file"
-                      id="file-upload"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                      required
-                    />
-                    <label htmlFor="file-upload" className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                      Browse Files
-                    </label>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      PDF, JPG, PNG (Max 10MB)
-                    </p>
-                  </div>
-                </div>
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                  required
+                />
+              </div>
 
-                {/* Remarks */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                    Remarks (Optional)
-                  </label>
-                  <textarea
-                    className="input-control"
-                    value={uploadData.remarks}
-                    onChange={(e) => setUploadData(prev => ({ ...prev, remarks: e.target.value }))}
-                    placeholder="Add any additional information"
-                    rows={3}
-                    style={{ width: '100%', resize: 'vertical' }}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Document Type *
+                </label>
+                <select
+                  value={uploadData.documentType}
+                  onChange={(e) => setUploadData(prev => ({ ...prev, documentType: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    backgroundColor: '#f8fafc',
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="id_proof">ID Proof / Passport / Aadhar</option>
+                  <option value="resume">Resume / Curriculum Vitae</option>
+                  <option value="educational">Educational Certificate</option>
+                  <option value="certificate">Professional Certification</option>
+                  <option value="contract">Signed Agreement / Offer</option>
+                  <option value="other">Other Document</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Select File *
+                </label>
+                <div style={{
+                  border: '2px dashed #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  backgroundColor: '#f8fafc',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="file"
+                    id="doc-file-input"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    required
                   />
+                  <label htmlFor="doc-file-input" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <Upload size={24} color="#2563eb" />
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#2563eb' }}>
+                      {uploadData.file ? uploadData.file.name : 'Choose a file to upload'}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      PDF, DOC, DOCX, PNG, JPG up to 10MB
+                    </span>
+                  </label>
                 </div>
+              </div>
 
-                {/* Buttons */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowUploadModal(false)}
-                    disabled={uploading}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Uploading...' : 'Upload'}
-                  </button>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#fff',
+                    fontSize: '14px',
+                    color: '#334155',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#2563eb',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {uploading ? 'Uploading...' : 'Save Document'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
     </div>
-  );
-};
-
-// Status Badge Component
-const StatusBadge = ({ status }) => {
-  const config = {
-    verified: { bg: 'var(--success-bg)', color: 'var(--success-text)', label: 'Verified' },
-    pending: { bg: 'var(--warning-bg)', color: 'var(--warning-text)', label: 'Pending Verification' },
-    rejected: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Rejected' }
-  };
-
-  const style = config[status] || config.pending;
-
-  return (
-    <span style={{
-      padding: '4px 12px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      fontWeight: 500,
-      backgroundColor: style.bg,
-      color: style.color
-    }}>
-      {style.label}
-    </span>
   );
 };
 

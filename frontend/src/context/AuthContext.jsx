@@ -29,20 +29,22 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     setError(null);
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email: identifier, password });
       if (res.data.success) {
         const { user, accessToken, refreshToken } = res.data.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         setUser(user);
-        return true;
+        return { success: true, user };
       }
+      return { success: false };
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-      return false;
+      const msg = err.response?.data?.message || 'Login failed';
+      setError(msg);
+      return { success: false, message: msg };
     }
   };
 

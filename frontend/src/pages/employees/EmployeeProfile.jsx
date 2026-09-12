@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon } from 'lucide-react';
-import { getEmployeeById, updateEmployee, getLookups } from '../../services/employeeApi';
+import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Send, CheckCircle, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
+import { getEmployeeById, updateEmployee, getLookups, resendInvitation } from '../../services/employeeApi';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
 import { State, City } from 'country-state-city';
 import '../../styles/components.css';
-
-
 
 const EmployeeProfile = () => {
   const { id } = useParams();
@@ -15,6 +13,11 @@ const EmployeeProfile = () => {
   const [lookups, setLookups] = useState({ departments: [], designations: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedDownload, setCopiedDownload] = useState(false);
   const [error, setError] = useState(null);
   
   const [editMode, setEditMode] = useState(false);
@@ -24,56 +27,44 @@ const EmployeeProfile = () => {
   const fetchEmployee = async () => {
     try {
       setLoading(true);
-      setError(null);
       const res = await getEmployeeById(id);
       if (res.success) {
         setEmployee(res.data);
-        const fetchedData = { ...res.data };
-        if (fetchedData.date_of_birth) fetchedData.date_of_birth = fetchedData.date_of_birth.split('T')[0];
-        if (fetchedData.joining_date) fetchedData.joining_date = fetchedData.joining_date.split('T')[0];
-        setFormData(fetchedData);
+        setFormData(res.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch employee details');
+      setError(err.response?.data?.message || 'Failed to load employee details');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchLookups = async () => {
+    try {
+      const res = await getLookups();
+      if (res.success) setLookups(res.data);
+    } catch (err) {
+      console.error('Error fetching lookups', err);
+    }
+  };
+
   useEffect(() => {
     fetchEmployee();
-    const fetchLookups = async () => {
-      try {
-        const res = await getLookups();
-        if (res.success) setLookups(res.data);
-      } catch (err) {
-        console.error("Failed to fetch lookups", err);
-      }
-    };
     fetchLookups();
   }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updated = { ...prev, [name]: value };
-      if (name === 'gross_salary' && value) {
-        const gross = parseFloat(value);
-        if (!isNaN(gross)) {
-          updated.basic_salary = (gross * 0.5).toFixed(2);
-          updated.hra = (gross * 0.2).toFixed(2);
-        }
-      }
-      return updated;
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleArrayChange = (key, index, field, value) => {
-    setFormData(prev => {
-      const updated = [...(prev[key] || [])];
-      updated[index][field] = value;
-      return { ...prev, [key]: updated };
-    });
+  const handleStateChange = (e) => {
+    const stateIso = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      office_state: stateIso,
+      office_city: ''
+    }));
   };
 
   const handleSave = async (e) => {
@@ -81,21 +72,46 @@ const EmployeeProfile = () => {
     setSaving(true);
     setError(null);
     try {
-      const payload = { ...formData };
-      delete payload.department_name;
-      delete payload.designation_name;
-      delete payload.documents;
-      ['department_id', 'designation_id', 'gender', 'blood_group'].forEach(k => { if (!payload[k]) payload[k] = null; });
-      
-      const res = await updateEmployee(id, payload);
+      const res = await updateEmployee(id, formData);
       if (res.success) {
+        setEmployee(res.data);
         setEditMode(false);
-        fetchEmployee();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update employee');
+      setError(err.response?.data?.message || 'Failed to update employee details');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendInvite = async () => {
+    setResending(true);
+    setResendStatus(null);
+    try {
+      const res = await resendInvitation(id);
+      if (res.success) {
+        setResendStatus({
+          type: res.data.email_status === 'SENT' ? 'success' : 'warning',
+          text: res.data.email_status === 'SENT' 
+            ? 'Onboarding invitation email with credentials and app download link resent successfully!'
+            : 'New activation link & token generated. Direct Gmail link ready below.',
+          data: res.data
+        });
+        if (res.data.gmail_compose_url) {
+          try {
+            window.open(res.data.gmail_compose_url, '_blank', 'noopener,noreferrer');
+          } catch (e) {
+            console.warn('Could not auto-open Gmail popup window:', e);
+          }
+        }
+      }
+    } catch (err) {
+      setResendStatus({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to resend invitation'
+      });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -114,9 +130,127 @@ const EmployeeProfile = () => {
          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{employee.first_name} {employee.last_name}</span>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      {resendStatus && (
+        <div style={{
+          padding: '16px 20px',
+          marginBottom: '20px',
+          borderRadius: '10px',
+          fontSize: '13px',
+          backgroundColor: resendStatus.type === 'success' ? '#ecfdf5' : '#fffbeb',
+          color: resendStatus.type === 'success' ? '#065f46' : '#92400e',
+          border: `1px solid ${resendStatus.type === 'success' ? '#a7f3d0' : '#fde68a'}`
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: resendStatus.data ? '12px' : '0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+              {resendStatus.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+              <span>{resendStatus.text}</span>
+            </div>
+
+            {resendStatus.data?.gmail_compose_url && (
+              <a
+                href={resendStatus.data.gmail_compose_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#ffffff',
+                  borderColor: '#ea4335',
+                  color: '#ea4335',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  padding: '6px 12px'
+                }}
+              >
+                <Mail size={14} color="#ea4335" /> Open in Gmail <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
+
+          {resendStatus.data && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              fontSize: '12px',
+              color: '#334155'
+            }}>
+              {resendStatus.data.activation_link && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <span><strong>Activation Link:</strong> <span style={{ fontFamily: 'monospace', color: '#2563eb' }}>{resendStatus.data.activation_link}</span></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resendStatus.data.activation_link);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                  >
+                    {copiedLink ? <Check size={13} color="#16a34a" /> : <Copy size={13} />} {copiedLink ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
+
+              {resendStatus.data.token && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <span><strong>Activation Token:</strong> <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{resendStatus.data.token}</code></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resendStatus.data.token);
+                      setCopiedToken(true);
+                      setTimeout(() => setCopiedToken(false), 2500);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                  >
+                    {copiedToken ? <Check size={13} color="#16a34a" /> : <Copy size={13} />} {copiedToken ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
+
+              {resendStatus.data.app_download_url && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <span><strong>App Download Link:</strong> <a href={resendStatus.data.app_download_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{resendStatus.data.app_download_url}</a></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resendStatus.data.app_download_url);
+                      setCopiedDownload(true);
+                      setTimeout(() => setCopiedDownload(false), 2500);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                  >
+                    {copiedDownload ? <Check size={13} color="#16a34a" /> : <Copy size={13} />} {copiedDownload ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
          <button className="btn btn-secondary" onClick={() => navigate('/app/employees')}><ArrowLeft size={16} /> Back to List</button>
-         <div style={{ display: 'flex', gap: '12px' }}>
+         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {employee.user_status === 'inactive' && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleResendInvite}
+                disabled={resending}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Send size={14} /> {resending ? 'Sending...' : 'Resend Onboarding Invite'}
+              </button>
+            )}
             <button type="button" className="btn btn-secondary" onClick={() => setShowIdModal(true)}>View ID Card</button>
             <button className="btn btn-secondary" onClick={() => navigate('/app/employees')}>Cancel</button>
             <button className="btn btn-primary" onClick={() => { setEditMode(true); }}><Save size={16} /> Edit Employee</button>

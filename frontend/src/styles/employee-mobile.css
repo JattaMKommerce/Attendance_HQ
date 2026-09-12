@@ -1,0 +1,226 @@
+/* Employee Mobile UI Redesign */
+
+.mobile-app-container {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #fbfbfe;
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-header {
+  padding: 24px 20px 16px;
+  background-color: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-greeting {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mobile-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.mobile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  padding: 16px;
+  border: 1px solid rgba(0,0,0,0.02);
+}
+
+/* Grid Layout */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 0 20px;
+  margin-top: 24px;
+}
+
+@media (max-width: 360px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  padding: 16px 8px;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.grid-item:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.grid-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.grid-item-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+}
+
+/* More Menu List */
+.more-list-container {
+  padding: 20px;
+}
+
+.more-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.more-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.more-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+  text-decoration: none;
+  color: #1e293b;
+}
+
+.more-list-item:last-child {
+  border-bottom: none;
+}
+
+.more-list-item-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.more-list-icon {
+  color: #64748b;
+}
+
+.more-list-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.more-logout {
+  color: #ef4444;
+  margin-top: 24px;
+  background: #fef2f2;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Bottom Nav */
+.mobile-main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 90px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  padding-bottom: env(safe-area-inset-bottom, 10px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #94a3b8;
+  gap: 4px;
+  min-width: 54px;
+  padding: 4px 8px;
+  transition: color 0.15s ease-in-out;
+}
+
+.bottom-nav-item.active {
+  color: #4f46e5;
+}
+
+.bottom-nav-item span {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Desktop override: Hide mobile bottom nav on wider screens */
+@media (min-width: 769px) {
+  .bottom-nav {
+    display: none !important;
+  }
+  .mobile-main-content {
+    padding-bottom: 24px;
+  }
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}

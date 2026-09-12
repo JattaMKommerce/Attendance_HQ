@@ -17,6 +17,10 @@ router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/register-organization', authController.registerOrganization);
 
+// Account Activation routes (public)
+router.get('/verify-activation', authController.verifyActivationToken);
+router.post('/activate-account', authLimiter, authController.activateAccount);
+
 // Protected routes
 router.get('/me', authenticate, authController.getCurrentUser);
 

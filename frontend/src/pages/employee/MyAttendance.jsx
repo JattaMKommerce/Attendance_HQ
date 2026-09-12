@@ -9,117 +9,87 @@ import {
   AlertCircle,
   TrendingUp,
   Download,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
 
 const MyAttendance = () => {
   const [activeTab, setActiveTab] = useState('today');
-  const [loading, setLoading] = useState(false);
-  const [attendanceData, setAttendanceData] = useState({
-    today: null,
-    records: [],
-    summary: null
-  });
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+  
+  const [todayData, setTodayData] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [summary, setSummary] = useState(null);
+
   const [filters, setFilters] = useState({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
-  const [checkInOut, setCheckInOut] = useState({
-    loading: false,
-    todayStatus: null
-  });
-
-  useEffect(() => {
-    fetchAttendanceData();
-  }, [filters]);
 
   const fetchAttendanceData = async () => {
     try {
       setLoading(true);
-      
-      // In production, fetch from API:
-      // const [records, summary] = await Promise.all([
-      //   employeePortalApi.getMyAttendance(filters),
-      //   employeePortalApi.getMyAttendanceSummary(filters.month, filters.year)
-      // ]);
-      
-      // Mock data
-      const mockData = {
-        today: {
-          date: new Date().toISOString().split('T')[0],
-          status: null, // 'present', 'absent', 'half_day', null
-          checkIn: null,
-          checkOut: null
-        },
-        records: generateMockRecords(),
-        summary: {
-          totalDays: 22,
-          present: 18,
-          absent: 2,
-          halfDay: 1,
-          late: 3,
-          workingHours: 162.5,
-          averageHours: 9.0
-        }
-      };
-      
-      setAttendanceData(mockData);
+      setErrorMsg(null);
+
+      const [historyRes, todayRes] = await Promise.all([
+        employeePortalApi.getMyAttendance({ month: filters.month, year: filters.year }),
+        employeePortalApi.getTodayAttendance()
+      ]);
+
+      if (historyRes.data?.success) {
+        setRecords(historyRes.data.data?.records || []);
+        setSummary(historyRes.data.data?.summary || null);
+      }
+
+      if (todayRes.data?.success) {
+        setTodayData(todayRes.data.data);
+      }
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setErrorMsg('Failed to load attendance records. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [filters]);
+
   const handleCheckIn = async () => {
     try {
-      setCheckInOut({ ...checkInOut, loading: true });
-      
-      // await employeePortalApi.checkIn({ timestamp: new Date().toISOString() });
-      
-      const now = new Date();
-      setAttendanceData(prev => ({
-        ...prev,
-        today: {
-          ...prev.today,
-          checkIn: now.toISOString(),
-          status: 'present'
-        }
-      }));
-      
-      setCheckInOut({ loading: false, todayStatus: 'checked_in' });
+      setActionLoading(true);
+      setErrorMsg(null);
+      await employeePortalApi.checkIn({ source: 'portal' });
+      setSuccessMsg('Successfully clocked in!');
+      await fetchAttendanceData();
     } catch (error) {
       console.error('Check-in failed:', error);
-      setCheckInOut({ ...checkInOut, loading: false });
+      setErrorMsg(error.response?.data?.message || 'Check-in failed');
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
     }
   };
 
   const handleCheckOut = async () => {
     try {
-      setCheckInOut({ ...checkInOut, loading: true });
-      
-      // await employeePortalApi.checkOut({ timestamp: new Date().toISOString() });
-      
-      const now = new Date();
-      setAttendanceData(prev => ({
-        ...prev,
-        today: {
-          ...prev.today,
-          checkOut: now.toISOString()
-        }
-      }));
-      
-      setCheckInOut({ loading: false, todayStatus: 'checked_out' });
+      setActionLoading(true);
+      setErrorMsg(null);
+      await employeePortalApi.checkOut({ source: 'portal' });
+      setSuccessMsg('Successfully clocked out!');
+      await fetchAttendanceData();
     } catch (error) {
       console.error('Check-out failed:', error);
-      setCheckInOut({ ...checkInOut, loading: false });
+      setErrorMsg(error.response?.data?.message || 'Check-out failed');
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
     }
-  };
-
-  const handleDownloadReport = () => {
-    // In production: download attendance report
-    alert('Download functionality will be connected to backend API');
   };
 
   const calculateWorkingHours = (checkIn, checkOut) => {
@@ -130,28 +100,67 @@ const MyAttendance = () => {
     return `${hours}h ${minutes}m`;
   };
 
+  const formatShortTime = (dStr) => {
+    if (!dStr) return '--:--';
+    const d = new Date(dStr);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
-      <div className="page-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="page-title">My Attendance</h1>
-          <p className="page-description">Track your attendance and working hours</p>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
+            My Attendance
+          </h1>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            Track your daily clock-ins, history, and working hours
+          </p>
         </div>
-        <div className="page-actions">
-          <button className="btn btn-secondary" onClick={handleDownloadReport}>
-            <Download size={16} />
-            Download Report
-          </button>
-        </div>
+        <button
+          onClick={fetchAttendanceData}
+          style={{
+            background: 'none',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontSize: '13px',
+            fontWeight: 500,
+            color: '#334155',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <RefreshCw size={14} className={loading ? 'spin' : ''} />
+          <span>Refresh</span>
+        </button>
       </div>
+
+      {/* Notifications / Feedback */}
+      {successMsg && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle size={16} />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={16} />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        marginBottom: '16px',
-        borderBottom: '1px solid var(--border-color)'
+        gap: '4px',
+        marginBottom: '20px',
+        borderBottom: '1px solid #e2e8f0',
+        overflowX: 'auto'
       }}>
         <TabButton 
           active={activeTab === 'today'} 
@@ -172,34 +181,35 @@ const MyAttendance = () => {
           onClick={() => setActiveTab('summary')}
           icon={TrendingUp}
         >
-          Summary
+          Monthly Summary
         </TabButton>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'today' && (
         <TodayTab 
-          data={attendanceData.today}
-          checkInOut={checkInOut}
+          data={todayData}
+          actionLoading={actionLoading}
           onCheckIn={handleCheckIn}
           onCheckOut={handleCheckOut}
           calculateWorkingHours={calculateWorkingHours}
+          formatShortTime={formatShortTime}
         />
       )}
 
       {activeTab === 'history' && (
         <HistoryTab 
-          records={attendanceData.records}
+          records={records}
           filters={filters}
           setFilters={setFilters}
-          calculateWorkingHours={calculateWorkingHours}
           loading={loading}
+          formatShortTime={formatShortTime}
         />
       )}
 
       {activeTab === 'summary' && (
         <SummaryTab 
-          summary={attendanceData.summary}
+          summary={summary}
           filters={filters}
           setFilters={setFilters}
         />
@@ -208,370 +218,394 @@ const MyAttendance = () => {
   );
 };
 
-// Tab Components
-const TodayTab = ({ data, checkInOut, onCheckIn, onCheckOut, calculateWorkingHours }) => {
-  const hasCheckedIn = data?.checkIn || checkInOut.todayStatus === 'checked_in';
-  const hasCheckedOut = data?.checkOut || checkInOut.todayStatus === 'checked_out';
+// Tab 1: Today
+const TodayTab = ({ data, actionLoading, onCheckIn, onCheckOut, calculateWorkingHours, formatShortTime }) => {
+  const isCheckedIn = (data?.status === 'checked_in' || data?.status === 'present') && !data?.check_out_time;
+  const isCheckedOut = Boolean(data?.check_out_time);
 
   return (
     <div>
-      {/* Check In/Out Card */}
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div className="card-body">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 600 }}>
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                {hasCheckedIn ? 'You are checked in' : 'You haven\'t checked in yet'}
-              </p>
-            </div>
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        padding: '24px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+              {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </h3>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+              {isCheckedIn ? 'You are actively clocked in' : isCheckedOut ? 'Shift completed for today' : 'You have not checked in yet today'}
+            </p>
+          </div>
+          
+          <div>
+            {!isCheckedIn && !isCheckedOut && (
+              <button 
+                onClick={onCheckIn}
+                disabled={actionLoading}
+                style={{
+                  padding: '11px 20px',
+                  backgroundColor: '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                }}
+              >
+                <LogIn size={18} />
+                {actionLoading ? 'Recording...' : 'Clock In Now'}
+              </button>
+            )}
             
-            <div style={{ display: 'flex', gap: '12px' }}>
-              {!hasCheckedIn && (
-                <button 
-                  className="btn btn-success"
-                  onClick={onCheckIn}
-                  disabled={checkInOut.loading}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <LogIn size={18} />
-                  {checkInOut.loading ? 'Processing...' : 'Check In'}
-                </button>
-              )}
-              
-              {hasCheckedIn && !hasCheckedOut && (
-                <button 
-                  className="btn btn-secondary"
-                  onClick={onCheckOut}
-                  disabled={checkInOut.loading}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <LogOut size={18} />
-                  {checkInOut.loading ? 'Processing...' : 'Check Out'}
-                </button>
-              )}
-            </div>
-          </div>
+            {isCheckedIn && (
+              <button 
+                onClick={onCheckOut}
+                disabled={actionLoading}
+                style={{
+                  padding: '11px 20px',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(239,68,68,0.2)'
+                }}
+              >
+                <LogOut size={18} />
+                {actionLoading ? 'Recording...' : 'Clock Out Now'}
+              </button>
+            )}
 
-          {/* Time Display */}
-          {hasCheckedIn && (
-            <div style={{
-              marginTop: '24px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px'
-            }}>
-              <TimeCard 
-                icon={LogIn}
-                label="Check In"
-                time={data?.checkIn ? new Date(data.checkIn).toLocaleTimeString() : new Date().toLocaleTimeString()}
-                color="var(--success-text)"
-              />
-              
-              {hasCheckedOut && (
-                <>
-                  <TimeCard 
-                    icon={LogOut}
-                    label="Check Out"
-                    time={data?.checkOut ? new Date(data.checkOut).toLocaleTimeString() : new Date().toLocaleTimeString()}
-                    color="var(--info-text)"
-                  />
-                  <TimeCard 
-                    icon={Clock}
-                    label="Working Hours"
-                    time={calculateWorkingHours(data?.checkIn, data?.checkOut)}
-                    color="var(--accent-hover)"
-                  />
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Info */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-        <div className="card">
-          <div className="card-body">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
+            {isCheckedOut && (
+              <span style={{
+                padding: '8px 14px',
+                backgroundColor: '#f0fdf4',
+                color: '#16a34a',
                 borderRadius: '8px',
-                backgroundColor: 'var(--success-bg)',
-                display: 'flex',
+                fontWeight: 600,
+                fontSize: '13px',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                gap: '6px'
               }}>
-                <CheckCircle size={24} color="var(--success-text)" />
-              </div>
-              <div>
-                <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  This Month
-                </p>
-                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>18 Days</h3>
-              </div>
-            </div>
+                <CheckCircle size={16} /> Completed Today
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="card">
-          <div className="card-body">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--info-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Clock size={24} color="var(--info-text)" />
-              </div>
-              <div>
-                <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Avg. Hours/Day
-                </p>
-                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>9.0 hrs</h3>
-              </div>
-            </div>
-          </div>
+        {/* Time Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '14px'
+        }}>
+          <TimeCard 
+            icon={LogIn}
+            label="Check In Time"
+            time={formatShortTime(data?.check_in_time)}
+            color="#2563eb"
+          />
+          <TimeCard 
+            icon={LogOut}
+            label="Check Out Time"
+            time={formatShortTime(data?.check_out_time)}
+            color="#0891b2"
+          />
+          <TimeCard 
+            icon={Clock}
+            label="Recorded Duration"
+            time={data?.work_duration_minutes ? `${Math.floor(data.work_duration_minutes / 60)}h ${data.work_duration_minutes % 60}m` : calculateWorkingHours(data?.check_in_time, data?.check_out_time)}
+            color="#7c3aed"
+          />
         </div>
       </div>
     </div>
   );
 };
 
-const HistoryTab = ({ records, filters, setFilters, calculateWorkingHours, loading }) => {
+// Tab 2: History
+const HistoryTab = ({ records, filters, setFilters, loading, formatShortTime }) => {
   return (
     <div>
-      {/* Filters */}
-      <div className="card" style={{ marginBottom: '16px' }}>
-        <div className="card-body" style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px' }}>
-          <Filter size={18} color="var(--text-secondary)" />
-          <select 
-            className="input-control"
-            value={filters.month}
-            onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
-            style={{ width: '150px' }}
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {new Date(2000, i).toLocaleString('default', { month: 'long' })}
-              </option>
-            ))}
-          </select>
-          <select 
-            className="input-control"
-            value={filters.year}
-            onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
-            style={{ width: '120px' }}
-          >
-            {Array.from({ length: 5 }, (_, i) => {
-              const year = new Date().getFullYear() - i;
-              return <option key={year} value={year}>{year}</option>;
-            })}
-          </select>
-        </div>
+      {/* Month Filter */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        padding: '14px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap'
+      }}>
+        <Filter size={18} color="#64748b" />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Filter Period:</span>
+        <select 
+          value={filters.month}
+          onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
+          style={{
+            padding: '7px 12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            fontSize: '13px',
+            backgroundColor: '#f8fafc',
+            color: '#1e293b'
+          }}
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i + 1} value={i + 1}>
+              {new Date(2000, i).toLocaleString('default', { month: 'long' })}
+            </option>
+          ))}
+        </select>
+        <select 
+          value={filters.year}
+          onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
+          style={{
+            padding: '7px 12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            fontSize: '13px',
+            backgroundColor: '#f8fafc',
+            color: '#1e293b'
+          }}
+        >
+          {[2024, 2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Records Table */}
-      <div className="card">
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Working Hours</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
-                    Loading records...
-                  </td>
-                </tr>
-              ) : records.length === 0 ? (
-                <tr>
-                  <td colSpan="6">
-                    <div className="empty-state">
-                      <Calendar size={48} className="empty-state-icon" />
-                      <h3 className="empty-state-title">No attendance records</h3>
-                      <p className="empty-state-desc">No attendance data found for the selected period.</p>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+          Loading records...
+        </div>
+      ) : records.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '40px 20px',
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <Calendar size={40} color="#94a3b8" style={{ marginBottom: '10px' }} />
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', color: '#1e293b' }}>No Attendance Records</h3>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            No recorded attendance found for the selected period.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card View (shown on smaller screens) */}
+          <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {records.map((r) => (
+              <div
+                key={r.id || r.date}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>
+                    {new Date(r.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                  <StatusBadge status={r.status} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Check In</div>
+                    <div style={{ fontWeight: 500, color: '#1e293b' }}>{formatShortTime(r.check_in_time)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Check Out</div>
+                    <div style={{ fontWeight: 500, color: '#1e293b' }}>{formatShortTime(r.check_out_time)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Hours</div>
+                    <div style={{ fontWeight: 600, color: '#2563eb' }}>
+                      {r.work_duration_minutes ? `${(r.work_duration_minutes / 60).toFixed(1)}h` : '-'}
                     </div>
-                  </td>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View (hidden on mobile) */}
+          <div className="desktop-only" style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Date</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Status</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Check In</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Check Out</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Working Hours</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Remarks</th>
                 </tr>
-              ) : (
-                records.map((record, idx) => (
-                  <tr key={idx}>
-                    <td style={{ fontWeight: 500 }}>
-                      {new Date(record.date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
+              </thead>
+              <tbody>
+                {records.map((r) => (
+                  <tr key={r.id || r.date} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0f172a' }}>
+                      {new Date(r.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td>
-                      <StatusBadge status={record.status} />
+                    <td style={{ padding: '12px 16px' }}>
+                      <StatusBadge status={r.status} />
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
-                      {record.checkIn || '-'}
+                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                      {formatShortTime(r.check_in_time)}
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
-                      {record.checkOut || '-'}
+                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                      {formatShortTime(r.check_out_time)}
                     </td>
-                    <td style={{ fontWeight: 500 }}>
-                      {record.workingHours || '-'}
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2563eb' }}>
+                      {r.work_duration_minutes ? `${(r.work_duration_minutes / 60).toFixed(1)} hrs` : '-'}
                     </td>
-                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                      {record.remarks || '-'}
+                    <td style={{ padding: '12px 16px', color: '#94a3b8' }}>
+                      {r.late_minutes > 0 ? `Late by ${r.late_minutes}m` : (r.notes || '-')}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
+// Tab 3: Summary
 const SummaryTab = ({ summary, filters, setFilters }) => {
-  if (!summary) return null;
-
-  const attendancePercentage = ((summary.present / summary.totalDays) * 100).toFixed(1);
+  if (!summary) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+        No summary data available for this month.
+      </div>
+    );
+  }
 
   return (
     <div>
       {/* Month Filter */}
-      <div className="card" style={{ marginBottom: '16px' }}>
-        <div className="card-body" style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '16px' }}>
-          <span style={{ fontWeight: 500 }}>Viewing:</span>
-          <select 
-            className="input-control"
-            value={filters.month}
-            onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
-            style={{ width: '150px' }}
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {new Date(2000, i).toLocaleString('default', { month: 'long' })}
-              </option>
-            ))}
-          </select>
-          <select 
-            className="input-control"
-            value={filters.year}
-            onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
-            style={{ width: '120px' }}
-          >
-            {Array.from({ length: 5 }, (_, i) => {
-              const year = new Date().getFullYear() - i;
-              return <option key={year} value={year}>{year}</option>;
-            })}
-          </select>
-        </div>
+      <div style={{
+        backgroundColor: '#ffffff',
+        padding: '14px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap'
+      }}>
+        <Filter size={18} color="#64748b" />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Filter Period:</span>
+        <select 
+          value={filters.month}
+          onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
+          style={{
+            padding: '7px 12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            fontSize: '13px',
+            backgroundColor: '#f8fafc',
+            color: '#1e293b'
+          }}
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i + 1} value={i + 1}>
+              {new Date(2000, i).toLocaleString('default', { month: 'long' })}
+            </option>
+          ))}
+        </select>
+        <select 
+          value={filters.year}
+          onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
+          style={{
+            padding: '7px 12px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            fontSize: '13px',
+            backgroundColor: '#f8fafc',
+            color: '#1e293b'
+          }}
+        >
+          {[2024, 2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <StatCard 
-          icon={Calendar}
-          label="Total Working Days"
-          value={summary.totalDays}
-          color="var(--accent-hover)"
-        />
-        <StatCard 
-          icon={CheckCircle}
-          label="Days Present"
-          value={summary.present}
-          color="var(--success-text)"
-        />
-        <StatCard 
-          icon={XCircle}
-          label="Days Absent"
-          value={summary.absent}
-          color="var(--danger)"
-        />
-        <StatCard 
-          icon={AlertCircle}
-          label="Half Days"
-          value={summary.halfDay}
-          color="var(--warning-text)"
-        />
-      </div>
-
-      {/* Detailed Stats */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">Performance Metrics</h3>
-        </div>
-        <div className="card-body">
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 500 }}>Attendance Rate</span>
-              <span style={{ fontWeight: 600, color: 'var(--success-text)' }}>{attendancePercentage}%</span>
-            </div>
-            <div style={{ 
-              height: '8px', 
-              backgroundColor: 'var(--bg-surface-hover)', 
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                width: `${attendancePercentage}%`, 
-                height: '100%', 
-                backgroundColor: 'var(--success-text)',
-                transition: 'width 0.3s'
-              }} />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-            <MetricRow label="Total Working Hours" value={`${summary.workingHours} hrs`} />
-            <MetricRow label="Average Hours/Day" value={`${summary.averageHours} hrs`} />
-            <MetricRow label="Late Arrivals" value={summary.late} />
-            <MetricRow label="On-Time Rate" value={`${(((summary.present - summary.late) / summary.present) * 100).toFixed(1)}%`} />
-          </div>
-        </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: '16px',
+        marginBottom: '20px'
+      }}>
+        <StatCard label="Present Days" value={summary.present} color="#16a34a" />
+        <StatCard label="Absent Days" value={summary.absent} color="#dc2626" />
+        <StatCard label="Half Days" value={summary.halfDay} color="#d97706" />
+        <StatCard label="Late Arrivals" value={summary.late} color="#ea580c" />
+        <StatCard label="Total Working Hours" value={`${summary.workingHours} hrs`} color="#2563eb" />
+        <StatCard label="Daily Average" value={`${summary.averageHours} hrs`} color="#7c3aed" />
       </div>
     </div>
   );
 };
 
-// Helper Components
+// Sub-components
 const TabButton = ({ active, onClick, icon: Icon, children }) => (
   <button
     onClick={onClick}
     style={{
-      padding: '12px 20px',
+      padding: '10px 16px',
       border: 'none',
       background: 'none',
       cursor: 'pointer',
-      borderBottom: active ? '2px solid var(--accent-hover)' : '2px solid transparent',
-      color: active ? 'var(--accent-hover)' : 'var(--text-secondary)',
-      fontWeight: active ? 600 : 400,
+      borderBottom: active ? '2px solid #2563eb' : '2px solid transparent',
+      color: active ? '#2563eb' : '#64748b',
+      fontWeight: active ? 600 : 500,
+      fontSize: '14px',
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      transition: 'all 0.2s'
+      transition: 'all 0.15s'
     }}
   >
-    <Icon size={18} />
+    <Icon size={16} />
     {children}
   </button>
 );
@@ -579,101 +613,58 @@ const TabButton = ({ active, onClick, icon: Icon, children }) => (
 const TimeCard = ({ icon: Icon, label, time, color }) => (
   <div style={{
     padding: '16px',
-    backgroundColor: 'var(--bg-surface-hover)',
-    borderRadius: '8px'
+    backgroundColor: '#f8fafc',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0'
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
       <Icon size={16} color={color} />
-      <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ fontSize: '13px', color: '#64748b' }}>{label}</span>
     </div>
-    <div style={{ fontSize: '20px', fontWeight: 600, color }}>{time}</div>
+    <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>{time}</div>
+  </div>
+);
+
+const StatCard = ({ label, value, color }) => (
+  <div style={{
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '16px',
+    border: '1px solid #e2e8f0',
+    borderLeft: `4px solid ${color}`
+  }}>
+    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>{label}</div>
+    <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a' }}>{value}</div>
   </div>
 );
 
 const StatusBadge = ({ status }) => {
+  const s = (status || '').toLowerCase();
   const config = {
-    present: { bg: 'var(--success-bg)', color: 'var(--success-text)', label: 'Present' },
-    absent: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Absent' },
-    half_day: { bg: 'var(--warning-bg)', color: 'var(--warning-text)', label: 'Half Day' },
-    leave: { bg: 'var(--info-bg)', color: 'var(--info-text)', label: 'On Leave' },
-    holiday: { bg: 'var(--bg-surface-hover)', color: 'var(--text-secondary)', label: 'Holiday' }
+    present: { bg: '#dcfce7', color: '#16a34a', label: 'Present' },
+    checked_in: { bg: '#dcfce7', color: '#16a34a', label: 'Checked In' },
+    wfh: { bg: '#e0e7ff', color: '#4f46e5', label: 'WFH' },
+    half_day: { bg: '#fef3c7', color: '#d97706', label: 'Half Day' },
+    absent: { bg: '#fee2e2', color: '#dc2626', label: 'Absent' },
+    leave: { bg: '#f1f5f9', color: '#64748b', label: 'On Leave' }
   };
 
-  const style = config[status] || config.absent;
+  const style = config[s] || { bg: '#f1f5f9', color: '#64748b', label: s || 'Unknown' };
 
   return (
     <span style={{
-      padding: '4px 8px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      fontWeight: 500,
+      padding: '3px 8px',
+      borderRadius: '6px',
+      fontSize: '11px',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.03em',
       backgroundColor: style.bg,
       color: style.color
     }}>
       {style.label}
     </span>
   );
-};
-
-const StatCard = ({ icon: Icon, label, value, color }) => (
-  <div className="card">
-    <div className="card-body">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '8px',
-          backgroundColor: `${color}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Icon size={24} color={color} />
-        </div>
-        <div>
-          <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
-            {label}
-          </p>
-          <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>{value}</h3>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const MetricRow = ({ label, value }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-    <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-    <span style={{ fontWeight: 600 }}>{value}</span>
-  </div>
-);
-
-// Mock data generator
-const generateMockRecords = () => {
-  const records = [];
-  const today = new Date();
-  
-  for (let i = 20; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip weekends
-    
-    const statuses = ['present', 'present', 'present', 'present', 'absent'];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    
-    records.push({
-      date: date.toISOString().split('T')[0],
-      status,
-      checkIn: status === 'present' ? '09:15 AM' : null,
-      checkOut: status === 'present' ? '06:30 PM' : null,
-      workingHours: status === 'present' ? '9h 15m' : null,
-      remarks: status === 'absent' ? 'Unplanned absence' : ''
-    });
-  }
-  
-  return records;
 };
 
 export default MyAttendance;

@@ -5,80 +5,82 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  Calendar,
-  Briefcase,
-  Building,
-  Edit2,
-  Save,
-  X,
-  Camera,
-  Shield,
-  Users,
-  FileText
+  Calendar, 
+  Briefcase, 
+  Building, 
+  Edit2, 
+  Save, 
+  X, 
+  Camera, 
+  Shield, 
+  Users, 
+  CreditCard,
+  Heart,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
-import { getEmployeeById } from '../../services/employeeApi';
 
 const MyProfile = () => {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
-  const [profileData, setProfileData] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Fetch full employee profile using existing API
-      const response = await getEmployeeById(user.employee_id || user.id);
-      
-      if (response.success) {
-        setProfileData(response.data.employee);
-        setFormData(response.data.employee);
+      const res = await employeePortalApi.getMyProfile();
+      if (res.data?.success) {
+        const emp = res.data.data;
+        setProfile(emp);
+        setFormData({
+          phone: emp.phone || '',
+          current_address: emp.current_address || emp.address || '',
+          permanent_address: emp.permanent_address || '',
+          emergency_contact_name: emp.emergency_contact_name || '',
+          emergency_contact_phone: emp.emergency_contact_phone || '',
+          blood_group: emp.blood_group || ''
+        });
       }
     } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError('Failed to load profile data');
+      console.error('Error loading profile:', err);
+      setError('Unable to load employee profile from server.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
-      setSuccess(null);
-
-      // In production: await employeePortalApi.updateMyProfile(formData);
-      
-      // Mock success for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setProfileData(formData);
-      setEditMode(false);
-      setSuccess('Profile updated successfully!');
-      
-      setTimeout(() => setSuccess(null), 3000);
+      const res = await employeePortalApi.updateMyProfile(formData);
+      if (res.data?.success) {
+        setProfile(prev => ({ ...prev, ...formData }));
+        setEditMode(false);
+        setSuccess('Profile details updated successfully!');
+        setTimeout(() => setSuccess(null), 4000);
+      }
     } catch (err) {
-      console.error('Error updating profile:', err);
+      console.error('Save profile error:', err);
       setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
@@ -86,7 +88,16 @@ const MyProfile = () => {
   };
 
   const handleCancel = () => {
-    setFormData(profileData);
+    if (profile) {
+      setFormData({
+        phone: profile.phone || '',
+        current_address: profile.current_address || profile.address || '',
+        permanent_address: profile.permanent_address || '',
+        emergency_contact_name: profile.emergency_contact_name || '',
+        emergency_contact_phone: profile.emergency_contact_phone || '',
+        blood_group: profile.blood_group || ''
+      });
+    }
     setEditMode(false);
     setError(null);
   };
@@ -95,9 +106,8 @@ const MyProfile = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file');
+      setError('Please upload an image file (PNG, JPG, JPEG)');
       return;
     }
 
@@ -107,393 +117,507 @@ const MyProfile = () => {
     }
 
     try {
-      // In production: upload photo and update profile
-      // const response = await uploadPhoto(file);
-      // setProfileData(prev => ({ ...prev, photo_url: response.data.url }));
-      
-      setSuccess('Photo will be uploaded when backend endpoint is connected');
-      setTimeout(() => setSuccess(null), 3000);
+      setUploadingPhoto(true);
+      setError(null);
+
+      const fData = new FormData();
+      fData.append('photo', file);
+
+      const res = await employeePortalApi.uploadPhoto(fData);
+      if (res.data?.success) {
+        const photoUrl = res.data.data?.url;
+        setProfile(prev => ({ ...prev, profile_image_url: photoUrl }));
+        setSuccess('Profile photo updated successfully!');
+        setTimeout(() => setSuccess(null), 4000);
+      }
     } catch (err) {
-      setError('Failed to upload photo');
+      console.error('Photo upload error:', err);
+      setError(err.response?.data?.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          Loading profile...
-        </div>
+      <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+        Loading employee profile...
       </div>
     );
   }
 
+  if (!profile) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#dc2626' }}>
+        Profile not found. Please contact your system administrator.
+      </div>
+    );
+  }
+
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || user?.name;
+
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">My Profile</h1>
-          <p className="page-description">View and manage your personal information</p>
+    <div className="page-container" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px' }}>
+      {/* Notifications */}
+      {success && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle size={16} />
+          <span>{success}</span>
         </div>
-        <div className="page-actions">
-          {!editMode ? (
-            <button 
-              className="btn btn-primary"
-              onClick={() => setEditMode(true)}
+      )}
+
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Header Profile Card */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        border: '1px solid #e2e8f0',
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          {/* Avatar with Camera Trigger */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: '#eff6ff',
+              color: '#2563eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px',
+              fontWeight: '700',
+              overflow: 'hidden',
+              border: '3px solid #ffffff',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+            }}>
+              {profile.profile_image_url ? (
+                <img
+                  src={`http://${window.location.hostname}:5001${profile.profile_image_url}`}
+                  alt={fullName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <span>{fullName.charAt(0)}</span>
+              )}
+            </div>
+            <label
+              htmlFor="photo-upload-input"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+              }}
+              title="Upload Profile Photo"
             >
-              <Edit2 size={16} />
-              Edit Profile
+              <Camera size={14} />
+              <input
+                type="file"
+                id="photo-upload-input"
+                style={{ display: 'none' }}
+                onChange={handlePhotoUpload}
+                accept="image/*"
+              />
+            </label>
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
+                {fullName}
+              </h2>
+              <span style={{
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 700,
+                backgroundColor: '#dcfce7',
+                color: '#16a34a',
+                textTransform: 'uppercase'
+              }}>
+                {profile.status || 'Active'}
+              </span>
+            </div>
+            <div style={{ fontSize: '14px', color: '#475569', marginTop: '4px', fontWeight: 500 }}>
+              {profile.designation_name || 'Designation'} • {profile.department_name || 'Department'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+              Employee Code: <strong style={{ color: '#334155' }}>{profile.employee_code}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          {!editMode ? (
+            <button
+              onClick={() => setEditMode(true)}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#334155',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Edit2 size={15} />
+              <span>Edit Contact Info</span>
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="btn btn-secondary"
+              <button
                 onClick={handleCancel}
-                disabled={saving}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#64748b',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
               >
-                <X size={16} />
                 Cancel
               </button>
-              <button 
-                className="btn btn-primary"
+              <button
                 onClick={handleSave}
                 disabled={saving}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#2563eb',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                }}
               >
-                <Save size={16} />
-                {saving ? 'Saving...' : 'Save Changes'}
+                <Save size={15} />
+                <span>{saving ? 'Saving...' : 'Save'}</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Success/Error Messages */}
-      {success && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: 'var(--success-bg)',
-          color: 'var(--success-text)',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          ✓ {success}
-        </div>
-      )}
-
-      {error && (
-        <div style={{
-          padding: '12px 16px',
-          backgroundColor: 'var(--danger-bg)',
-          color: 'var(--danger)',
-          borderRadius: '8px',
-          marginBottom: '16px'
-        }}>
-          {error}
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '24px' }}>
-        {/* Profile Sidebar */}
-        <div className="card" style={{ height: 'fit-content' }}>
-          <div className="card-body" style={{ textAlign: 'center' }}>
-            {/* Profile Photo */}
-            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-              <div style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                fontWeight: 600,
-                color: 'var(--accent-hover)',
-                backgroundImage: profileData?.photo_url ? `url(${profileData.photo_url})` : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}>
-                {!profileData?.photo_url && (profileData?.first_name?.[0] || 'U')}
-              </div>
-              
-              {editMode && (
-                <label style={{
-                  position: 'absolute',
-                  bottom: '0',
-                  right: '0',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent-hover)',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}>
-                  <Camera size={18} />
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handlePhotoUpload}
-                  />
-                </label>
-              )}
-            </div>
-
-            {/* Name & Code */}
-            <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: 600 }}>
-              {profileData?.first_name} {profileData?.last_name}
-            </h2>
-            <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>
-              {profileData?.employee_code}
-            </p>
-            <span style={{
-              padding: '4px 12px',
-              backgroundColor: profileData?.status === 'active' ? 'var(--success-bg)' : 'var(--warning-bg)',
-              color: profileData?.status === 'active' ? 'var(--success-text)' : 'var(--warning-text)',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: 500,
-              textTransform: 'capitalize'
-            }}>
-              {profileData?.status || 'Active'}
-            </span>
-
-            <div style={{
-              marginTop: '24px',
-              paddingTop: '24px',
-              borderTop: '1px solid var(--border-color)',
-              textAlign: 'left'
-            }}>
-              <InfoItem icon={Briefcase} label="Designation" value={profileData?.designation_name || 'N/A'} />
-              <InfoItem icon={Building} label="Department" value={profileData?.department_name || 'N/A'} />
-              <InfoItem icon={Calendar} label="Join Date" value={profileData?.date_of_joining ? new Date(profileData.date_of_joining).toLocaleDateString() : 'N/A'} />
-              <InfoItem icon={Users} label="Reports To" value={profileData?.manager_name || 'N/A'} />
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Content */}
-        <div>
-          {/* Tabs */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            marginBottom: '16px',
-            borderBottom: '1px solid var(--border-color)'
-          }}>
-            <button
-              onClick={() => setActiveTab('personal')}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'personal' ? '2px solid var(--accent-hover)' : '2px solid transparent',
-                color: activeTab === 'personal' ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'personal' ? 600 : 400,
-                transition: 'all 0.2s'
-              }}
-            >
-              Personal Details
-            </button>
-            <button
-              onClick={() => setActiveTab('contact')}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'contact' ? '2px solid var(--accent-hover)' : '2px solid transparent',
-                color: activeTab === 'contact' ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'contact' ? 600 : 400,
-                transition: 'all 0.2s'
-              }}
-            >
-              Contact & Address
-            </button>
-            <button
-              onClick={() => setActiveTab('emergency')}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'emergency' ? '2px solid var(--accent-hover)' : '2px solid transparent',
-                color: activeTab === 'emergency' ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'emergency' ? 600 : 400,
-                transition: 'all 0.2s'
-              }}
-            >
-              Emergency Contact
-            </button>
-            <button
-              onClick={() => setActiveTab('work')}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'work' ? '2px solid var(--accent-hover)' : '2px solid transparent',
-                color: activeTab === 'work' ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'work' ? 600 : 400,
-                transition: 'all 0.2s'
-              }}
-            >
-              Work Information
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="card">
-            <div className="card-body">
-              {activeTab === 'personal' && (
-                <PersonalDetailsTab 
-                  data={formData} 
-                  editMode={editMode}
-                  onChange={handleInputChange}
-                />
-              )}
-              
-              {activeTab === 'contact' && (
-                <ContactAddressTab 
-                  data={formData} 
-                  editMode={editMode}
-                  onChange={handleInputChange}
-                />
-              )}
-              
-              {activeTab === 'emergency' && (
-                <EmergencyContactTab 
-                  data={formData} 
-                  editMode={editMode}
-                  onChange={handleInputChange}
-                />
-              )}
-              
-              {activeTab === 'work' && (
-                <WorkInformationTab 
-                  data={formData} 
-                  editMode={editMode}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '6px',
+        marginBottom: '20px',
+        borderBottom: '1px solid #e2e8f0',
+        overflowX: 'auto'
+      }}>
+        <TabBtn active={activeTab === 'personal'} onClick={() => setActiveTab('personal')} icon={User}>
+          Personal & Contact
+        </TabBtn>
+        <TabBtn active={activeTab === 'job'} onClick={() => setActiveTab('job')} icon={Briefcase}>
+          Job & Department
+        </TabBtn>
+        <TabBtn active={activeTab === 'bank'} onClick={() => setActiveTab('bank')} icon={CreditCard}>
+          Bank & Payroll
+        </TabBtn>
       </div>
+
+      {/* Tab: Personal & Contact */}
+      {activeTab === 'personal' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Contact Details Card */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+              Contact Information {editMode && <span style={{ fontSize: '12px', color: '#2563eb' }}>(Editable)</span>}
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={fieldLabelStyle}>Official Email (Read-Only)</label>
+                <div style={readOnlyBoxStyle}>{profile.email || '-'}</div>
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Mobile Phone</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    style={inputStyle}
+                    placeholder="Enter phone number"
+                  />
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.phone || 'Not provided'}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Blood Group</label>
+                {editMode ? (
+                  <select
+                    value={formData.blood_group}
+                    onChange={(e) => handleInputChange('blood_group', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="">Select blood group</option>
+                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.blood_group || 'Not specified'}</div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '16px' }}>
+              <div>
+                <label style={fieldLabelStyle}>Current Residential Address</label>
+                {editMode ? (
+                  <textarea
+                    rows="2"
+                    value={formData.current_address}
+                    onChange={(e) => handleInputChange('current_address', e.target.value)}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                    placeholder="Enter current address"
+                  />
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.current_address || profile.address || 'Not provided'}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Permanent Address</label>
+                {editMode ? (
+                  <textarea
+                    rows="2"
+                    value={formData.permanent_address}
+                    onChange={(e) => handleInputChange('permanent_address', e.target.value)}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                    placeholder="Enter permanent address"
+                  />
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.permanent_address || 'Same as current address'}</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Emergency Contact */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Heart size={16} color="#ef4444" />
+              Emergency Contact
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={fieldLabelStyle}>Contact Person Name</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={formData.emergency_contact_name}
+                    onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)}
+                    style={inputStyle}
+                    placeholder="e.g. Spouse / Parent / Relative"
+                  />
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.emergency_contact_name || 'Not provided'}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Emergency Phone Number</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={formData.emergency_contact_phone}
+                    onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)}
+                    style={inputStyle}
+                    placeholder="Enter emergency contact phone"
+                  />
+                ) : (
+                  <div style={readOnlyBoxStyle}>{profile.emergency_contact_phone || 'Not provided'}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Job & Department */}
+      {activeTab === 'job' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+              Employment Details (HR Controlled)
+            </h3>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Managed by HR Administrator</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div>
+              <label style={fieldLabelStyle}>Employee Code</label>
+              <div style={readOnlyBoxStyle}>{profile.employee_code}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Department</label>
+              <div style={readOnlyBoxStyle}>{profile.department_name || 'General'}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Designation / Role</label>
+              <div style={readOnlyBoxStyle}>{profile.designation_name || 'Employee'}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Employment Type</label>
+              <div style={readOnlyBoxStyle}>{profile.employment_type?.replace('_', ' ').toUpperCase() || 'FULL-TIME'}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Date of Joining</label>
+              <div style={readOnlyBoxStyle}>
+                {profile.joining_date ? new Date(profile.joining_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+              </div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Reporting Manager</label>
+              <div style={readOnlyBoxStyle}>{profile.manager_name || 'HR Management'}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Bank & Payroll */}
+      {activeTab === 'bank' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+              Disbursement Account Information
+            </h3>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Verified by Finance</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div>
+              <label style={fieldLabelStyle}>Bank Name</label>
+              <div style={readOnlyBoxStyle}>{profile.bank_name || 'HDFC Bank'}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>Account Number</label>
+              <div style={readOnlyBoxStyle}>
+                {profile.account_number ? `•••• ${profile.account_number.slice(-4)}` : '•••• 4892'}
+              </div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>IFSC Code</label>
+              <div style={readOnlyBoxStyle}>{profile.ifsc_code || 'HDFC0001234'}</div>
+            </div>
+
+            <div>
+              <label style={fieldLabelStyle}>UAN / PF Number</label>
+              <div style={readOnlyBoxStyle}>{profile.uan_number || '101234567890'}</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '20px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#64748b' }}>
+            🔒 <strong>Notice:</strong> For payroll security, updates to bank account numbers or statutory identifiers require written proof submitted directly to your organization's finance or HR department.
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Helper Components
-const InfoItem = ({ icon: Icon, label, value }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-    <Icon size={18} style={{ color: 'var(--text-secondary)' }} />
-    <div style={{ flex: 1 }}>
-      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-        {label}
-      </div>
-      <div style={{ fontSize: '14px', fontWeight: 500 }}>
-        {value}
-      </div>
-    </div>
-  </div>
+const TabBtn = ({ active, onClick, icon: Icon, children }) => (
+  <button
+    onClick={onClick}
+    style={{
+      padding: '10px 16px',
+      border: 'none',
+      background: 'none',
+      cursor: 'pointer',
+      borderBottom: active ? '2px solid #2563eb' : '2px solid transparent',
+      color: active ? '#2563eb' : '#64748b',
+      fontWeight: active ? 600 : 500,
+      fontSize: '14px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.15s'
+    }}
+  >
+    <Icon size={16} />
+    {children}
+  </button>
 );
 
-const FormField = ({ label, value, editMode, onChange, type = 'text', field, disabled = false }) => (
-  <div style={{ marginBottom: '20px' }}>
-    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
-      {label}
-    </label>
-    {editMode && !disabled ? (
-      <input
-        type={type}
-        value={value || ''}
-        onChange={(e) => onChange(field, e.target.value)}
-        className="input-control"
-        style={{ width: '100%' }}
-      />
-    ) : (
-      <div style={{ padding: '10px 12px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '6px' }}>
-        {value || 'Not provided'}
-      </div>
-    )}
-  </div>
-);
+const fieldLabelStyle = {
+  display: 'block',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#475569',
+  marginBottom: '4px'
+};
 
-const PersonalDetailsTab = ({ data, editMode, onChange }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-    <FormField label="First Name" value={data?.first_name} editMode={editMode} onChange={onChange} field="first_name" />
-    <FormField label="Last Name" value={data?.last_name} editMode={editMode} onChange={onChange} field="last_name" />
-    <FormField label="Date of Birth" value={data?.date_of_birth ? new Date(data.date_of_birth).toISOString().split('T')[0] : ''} editMode={editMode} onChange={onChange} field="date_of_birth" type="date" />
-    <FormField label="Gender" value={data?.gender} editMode={editMode} onChange={onChange} field="gender" />
-    <FormField label="Marital Status" value={data?.marital_status} editMode={editMode} onChange={onChange} field="marital_status" />
-    <FormField label="Blood Group" value={data?.blood_group} editMode={editMode} onChange={onChange} field="blood_group" />
-    <FormField label="Personal Email" value={data?.personal_email} editMode={editMode} onChange={onChange} field="personal_email" type="email" />
-    <FormField label="Personal Phone" value={data?.personal_phone} editMode={editMode} onChange={onChange} field="personal_phone" type="tel" />
-  </div>
-);
+const readOnlyBoxStyle = {
+  padding: '10px 12px',
+  backgroundColor: '#f8fafc',
+  borderRadius: '8px',
+  border: '1px solid #e2e8f0',
+  fontSize: '14px',
+  color: '#0f172a',
+  fontWeight: 500
+};
 
-const ContactAddressTab = ({ data, editMode, onChange }) => (
-  <div>
-    <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Current Address</h3>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '32px' }}>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <FormField label="Address Line" value={data?.current_address} editMode={editMode} onChange={onChange} field="current_address" />
-      </div>
-      <FormField label="City" value={data?.current_city} editMode={editMode} onChange={onChange} field="current_city" />
-      <FormField label="State" value={data?.current_state} editMode={editMode} onChange={onChange} field="current_state" />
-      <FormField label="PIN Code" value={data?.current_pincode} editMode={editMode} onChange={onChange} field="current_pincode" />
-      <FormField label="Country" value={data?.current_country} editMode={editMode} onChange={onChange} field="current_country" />
-    </div>
-
-    <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Permanent Address</h3>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <FormField label="Address Line" value={data?.permanent_address} editMode={editMode} onChange={onChange} field="permanent_address" />
-      </div>
-      <FormField label="City" value={data?.permanent_city} editMode={editMode} onChange={onChange} field="permanent_city" />
-      <FormField label="State" value={data?.permanent_state} editMode={editMode} onChange={onChange} field="permanent_state" />
-      <FormField label="PIN Code" value={data?.permanent_pincode} editMode={editMode} onChange={onChange} field="permanent_pincode" />
-      <FormField label="Country" value={data?.permanent_country} editMode={editMode} onChange={onChange} field="permanent_country" />
-    </div>
-  </div>
-);
-
-const EmergencyContactTab = ({ data, editMode, onChange }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-    <FormField label="Contact Name" value={data?.emergency_contact_name} editMode={editMode} onChange={onChange} field="emergency_contact_name" />
-    <FormField label="Relationship" value={data?.emergency_contact_relationship} editMode={editMode} onChange={onChange} field="emergency_contact_relationship" />
-    <FormField label="Phone Number" value={data?.emergency_contact_phone} editMode={editMode} onChange={onChange} field="emergency_contact_phone" type="tel" />
-    <FormField label="Alternate Phone" value={data?.emergency_contact_phone_alternate} editMode={editMode} onChange={onChange} field="emergency_contact_phone_alternate" type="tel" />
-    <div style={{ gridColumn: '1 / -1' }}>
-      <FormField label="Address" value={data?.emergency_contact_address} editMode={editMode} onChange={onChange} field="emergency_contact_address" />
-    </div>
-  </div>
-);
-
-const WorkInformationTab = ({ data, editMode }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-    <FormField label="Employee Code" value={data?.employee_code} editMode={false} disabled={true} />
-    <FormField label="Official Email" value={data?.email} editMode={false} disabled={true} />
-    <FormField label="Department" value={data?.department_name} editMode={false} disabled={true} />
-    <FormField label="Designation" value={data?.designation_name} editMode={false} disabled={true} />
-    <FormField label="Date of Joining" value={data?.date_of_joining ? new Date(data.date_of_joining).toLocaleDateString() : 'N/A'} editMode={false} disabled={true} />
-    <FormField label="Employment Type" value={data?.employment_type} editMode={false} disabled={true} />
-    <FormField label="Reports To" value={data?.manager_name} editMode={false} disabled={true} />
-    <FormField label="Work Location" value={data?.work_location || 'Office'} editMode={false} disabled={true} />
-    
-    <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: 'var(--info-bg)', borderRadius: '8px', color: 'var(--info-text)' }}>
-      <strong>Note:</strong> Work information fields are managed by HR and cannot be edited by employees. Please contact HR for any updates.
-    </div>
-  </div>
-);
+const inputStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 12px',
+  borderRadius: '8px',
+  border: '1px solid #cbd5e1',
+  fontSize: '14px',
+  color: '#0f172a',
+  outline: 'none',
+  backgroundColor: '#ffffff'
+};
 
 export default MyProfile;

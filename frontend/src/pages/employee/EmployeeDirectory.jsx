@@ -4,385 +4,267 @@ import {
   Search, 
   Mail, 
   Phone, 
-  Briefcase,
-  Building,
-  MapPin,
-  Filter
+  Briefcase, 
+  Building, 
+  MapPin, 
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
 
 const EmployeeDirectory = () => {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
-  const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [departments, setDepartments] = useState([]);
-
-  useEffect(() => {
-    fetchDirectory();
-  }, []);
-
-  useEffect(() => {
-    filterEmployees();
-  }, [search, selectedDepartment, employees]);
+  const [error, setError] = useState(null);
 
   const fetchDirectory = async () => {
     try {
       setLoading(true);
-      
-      // In production:
-      // const response = await employeePortalApi.getEmployeeDirectory();
-      // setEmployees(response.data.employees);
-      
-      // Mock data
-      const mockEmployees = generateMockDirectory();
-      setEmployees(mockEmployees);
-      
-      // Extract unique departments
-      const uniqueDepts = [...new Set(mockEmployees.map(e => e.department))].filter(Boolean);
-      setDepartments(uniqueDepts);
-      
-      setFilteredEmployees(mockEmployees);
-    } catch (error) {
-      console.error('Error fetching directory:', error);
+      setError(null);
+
+      const params = {};
+      if (search.trim()) params.search = search.trim();
+      if (selectedDepartment !== 'all') params.department = selectedDepartment;
+
+      const res = await employeePortalApi.getDirectory(params);
+      if (res.data?.success) {
+        const emps = res.data.data || [];
+        setEmployees(emps);
+
+        // Extract departments
+        const depts = [...new Set(emps.map(e => e.department_name))].filter(Boolean);
+        if (departments.length === 0 && depts.length > 0) {
+          setDepartments(depts);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching directory:', err);
+      setError('Failed to load employee directory.');
     } finally {
       setLoading(false);
     }
   };
 
-  const filterEmployees = () => {
-    let filtered = employees;
-
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(emp =>
-        emp.name.toLowerCase().includes(searchLower) ||
-        emp.email.toLowerCase().includes(searchLower) ||
-        emp.designation?.toLowerCase().includes(searchLower) ||
-        emp.department?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Department filter
-    if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(emp => emp.department === selectedDepartment);
-    }
-
-    setFilteredEmployees(filtered);
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDirectory();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, selectedDepartment]);
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
-      <div className="page-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="page-title">Employee Directory</h1>
-          <p className="page-description">Search and connect with your colleagues</p>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
+            Company Directory
+          </h1>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            Find colleagues, department contacts, and team members
+          </p>
+        </div>
+
+        <button
+          onClick={fetchDirectory}
+          style={{
+            background: 'none',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '13px',
+            color: '#334155',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <RefreshCw size={14} className={loading ? 'spin' : ''} />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {/* Search & Department Filters */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '14px',
+        border: '1px solid #e2e8f0',
+        padding: '16px',
+        marginBottom: '20px',
+        display: 'flex',
+        gap: '12px',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            placeholder="Search by name, email, or role..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '9px 12px 9px 38px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '14px',
+              color: '#0f172a',
+              outline: 'none',
+              backgroundColor: '#f8fafc'
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Filter size={16} color="#64748b" />
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            style={{
+              padding: '9px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '13px',
+              color: '#0f172a',
+              backgroundColor: '#ffffff',
+              fontWeight: 500
+            }}
+          >
+            <option value="all">All Departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div className="card-body" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Search */}
-            <div style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
-              <Search 
-                size={18} 
-                style={{ 
-                  position: 'absolute', 
-                  left: '12px', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)' 
-                }} 
-              />
-              <input
-                type="text"
-                placeholder="Search by name, email, designation..."
-                className="input-control"
-                style={{ width: '100%', paddingLeft: '40px' }}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            {/* Department Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Filter size={18} color="var(--text-secondary)" />
-              <select
-                className="input-control"
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                style={{ minWidth: '200px' }}
-              >
-                <option value="all">All Departments</option>
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Results Count */}
-          <div style={{ marginTop: '12px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Showing {filteredEmployees.length} of {employees.length} employees
-          </div>
+      {/* Error Message */}
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
+          {error}
         </div>
-      </div>
+      )}
 
-      {/* Employee Grid */}
+      {/* Directory Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          Loading directory...
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+          Loading team directory...
         </div>
-      ) : filteredEmployees.length === 0 ? (
-        <div className="card">
-          <div className="card-body">
-            <div className="empty-state">
-              <Users size={48} className="empty-state-icon" />
-              <h3 className="empty-state-title">No employees found</h3>
-              <p className="empty-state-desc">
-                {search || selectedDepartment !== 'all' 
-                  ? "Try adjusting your search or filters" 
-                  : "No employees in the directory"}
-              </p>
-            </div>
-          </div>
+      ) : employees.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '48px 24px',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+        }}>
+          <Users size={40} color="#94a3b8" style={{ marginBottom: '12px' }} />
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>
+            No Colleagues Found
+          </h3>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            Try adjusting your search criteria or department filter.
+          </p>
         </div>
       ) : (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
-          gap: '20px' 
-        }}>
-          {filteredEmployees.map(employee => (
-            <EmployeeCard key={employee.id} employee={employee} />
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          {employees.map((emp) => {
+            const empName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+            return (
+              <div
+                key={emp.id}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '18px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    backgroundColor: '#eff6ff',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    overflow: 'hidden'
+                  }}>
+                    {emp.profile_image_url ? (
+                      <img
+                        src={`http://${window.location.hostname}:5001${emp.profile_image_url}`}
+                        alt={empName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span>{emp.first_name?.charAt(0) || 'E'}</span>
+                    )}
+                  </div>
+
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h4 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {empName}
+                    </h4>
+                    <div style={{ fontSize: '12px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {emp.designation_name || 'Team Member'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: 600 }}>
+                      {emp.department_name || 'General'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                  {emp.email && (
+                    <a
+                      href={`mailto:${emp.email}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', textDecoration: 'none' }}
+                    >
+                      <Mail size={14} color="#64748b" />
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.email}</span>
+                    </a>
+                  )}
+                  {emp.phone && (
+                    <a
+                      href={`tel:${emp.phone}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', textDecoration: 'none' }}
+                    >
+                      <Phone size={14} color="#64748b" />
+                      <span>{emp.phone}</span>
+                    </a>
+                  )}
+                  {emp.location && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8' }}>
+                      <MapPin size={14} color="#94a3b8" />
+                      <span>{emp.location}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
-
-// Employee Card Component
-const EmployeeCard = ({ employee }) => {
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  return (
-    <div className="card">
-      <div className="card-body">
-        {/* Profile Section */}
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-          {/* Avatar */}
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            backgroundColor: employee.photo ? 'transparent' : 'var(--accent-bg)',
-            backgroundImage: employee.photo ? `url(${employee.photo})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            fontWeight: 600,
-            color: 'var(--accent-hover)',
-            flexShrink: 0
-          }}>
-            {!employee.photo && getInitials(employee.name)}
-          </div>
-
-          {/* Info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{ 
-              margin: '0 0 4px 0', 
-              fontSize: '16px', 
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {employee.name}
-            </h3>
-            <p style={{ 
-              margin: '0 0 4px 0', 
-              fontSize: '14px', 
-              color: 'var(--text-secondary)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {employee.designation}
-            </p>
-            <p style={{ 
-              margin: 0, 
-              fontSize: '13px', 
-              color: 'var(--text-muted)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {employee.employeeCode}
-            </p>
-          </div>
-        </div>
-
-        {/* Contact Info */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '12px',
-          paddingTop: '16px',
-          borderTop: '1px solid var(--border-color)'
-        }}>
-          {/* Email */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Mail size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-            <a 
-              href={`mailto:${employee.email}`}
-              style={{ 
-                fontSize: '14px',
-                color: 'var(--accent-hover)',
-                textDecoration: 'none',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {employee.email}
-            </a>
-          </div>
-
-          {/* Phone */}
-          {employee.phone && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Phone size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-              <a 
-                href={`tel:${employee.phone}`}
-                style={{ 
-                  fontSize: '14px',
-                  color: 'var(--text-primary)',
-                  textDecoration: 'none'
-                }}
-              >
-                {employee.phone}
-              </a>
-            </div>
-          )}
-
-          {/* Department */}
-          {employee.department && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Building size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-              <span style={{ 
-                fontSize: '14px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {employee.department}
-              </span>
-            </div>
-          )}
-
-          {/* Location */}
-          {employee.location && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MapPin size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-              <span style={{ 
-                fontSize: '14px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {employee.location}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-          <a 
-            href={`mailto:${employee.email}`}
-            className="btn btn-secondary"
-            style={{ flex: 1, fontSize: '14px', padding: '8px', textDecoration: 'none', textAlign: 'center' }}
-          >
-            <Mail size={16} />
-            Email
-          </a>
-          {employee.phone && (
-            <a 
-              href={`tel:${employee.phone}`}
-              className="btn btn-secondary"
-              style={{ flex: 1, fontSize: '14px', padding: '8px', textDecoration: 'none', textAlign: 'center' }}
-            >
-              <Phone size={16} />
-              Call
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Mock data generator
-const generateMockDirectory = () => {
-  const firstNames = ['Rajesh', 'Priya', 'Amit', 'Sneha', 'Vikram', 'Anjali', 'Rahul', 'Pooja', 'Arjun', 'Divya', 
-                     'Karan', 'Meera', 'Rohan', 'Nisha', 'Sanjay', 'Kavya', 'Aditya', 'Riya', 'Vivek', 'Shreya'];
-  const lastNames = ['Kumar', 'Sharma', 'Singh', 'Patel', 'Gupta', 'Reddy', 'Iyer', 'Nair', 'Rao', 'Mehta'];
-  
-  const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Product', 'Design'];
-  
-  const designations = {
-    'Engineering': ['Software Engineer', 'Senior Engineer', 'Tech Lead', 'Engineering Manager'],
-    'Marketing': ['Marketing Manager', 'Content Writer', 'SEO Specialist', 'Brand Manager'],
-    'Sales': ['Sales Executive', 'Account Manager', 'Sales Manager', 'Business Development'],
-    'HR': ['HR Manager', 'HR Executive', 'Recruiter', 'HR Business Partner'],
-    'Finance': ['Financial Analyst', 'Accountant', 'Finance Manager', 'Controller'],
-    'Operations': ['Operations Manager', 'Operations Executive', 'Logistics Manager'],
-    'Product': ['Product Manager', 'Product Owner', 'Product Analyst'],
-    'Design': ['UI Designer', 'UX Designer', 'Graphic Designer', 'Design Lead']
-  };
-
-  const locations = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune', 'Chennai'];
-
-  const employees = [];
-  
-  for (let i = 0; i < 50; i++) {
-    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const name = `${firstName} ${lastName}`;
-    const department = departments[Math.floor(Math.random() * departments.length)];
-    const designation = designations[department][Math.floor(Math.random() * designations[department].length)];
-    
-    employees.push({
-      id: i + 1,
-      name,
-      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@company.com`,
-      phone: Math.random() > 0.3 ? `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}` : null,
-      employeeCode: `EMP${String(i + 1).padStart(4, '0')}`,
-      designation,
-      department,
-      location: locations[Math.floor(Math.random() * locations.length)],
-      photo: null // Can add photo URLs if needed
-    });
-  }
-
-  // Sort by name
-  return employees.sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export default EmployeeDirectory;

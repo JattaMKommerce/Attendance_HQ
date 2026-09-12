@@ -1,17 +1,22 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../utils/tokenUtils');
 
 class AuthService {
-  async login(email, password, ipAddress, userAgent) {
-    // 1. Find user by email
+  async login(identifier, password, ipAddress, userAgent) {
+    // 1. Find user by email or employee_code
     const [users] = await db.execute(
-      'SELECT id, organization_id, email, password_hash, first_name, last_name, status FROM users WHERE email = ?',
-      [email]
+      `SELECT DISTINCT u.id, u.organization_id, u.email, u.password_hash, u.first_name, u.last_name, u.status 
+       FROM users u 
+       LEFT JOIN employees e ON (e.user_id = u.id OR e.email = u.email)
+       WHERE u.email = ? OR e.employee_code = ?
+       LIMIT 1`,
+      [identifier, identifier]
     );
 
     if (users.length === 0) {
-      throw new Error('Invalid email or password'); // Generic message
+      throw new Error('Invalid email, employee ID, or password');
     }
 
     const user = users[0];
@@ -64,12 +69,25 @@ class AuthService {
     );
     
     // Avoid returning sensitive data
+    let [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE user_id = ?', [user.id]);
+    if (emp.length === 0 && user.organization_id) {
+      [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE email = ? AND organization_id = ?', [user.email, user.organization_id]);
+      if (emp.length > 0) {
+        await db.execute('UPDATE employees SET user_id = ? WHERE id = ?', [user.id, emp[0].id]);
+      }
+    }
+    const employee_id = emp.length > 0 ? emp[0].id : null;
+    const employee_code = emp.length > 0 ? emp[0].employee_code : null;
+
     const safeUser = {
       id: user.id,
       organization_id: user.organization_id,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+      employee_id,
+      employee_code,
       roles: roles.map(r => r.name)
     };
 
@@ -79,7 +97,7 @@ class AuthService {
   async logLogin(userId, ipAddress, userAgent, status) {
     await db.execute(
       'INSERT INTO login_history (user_id, ip_address, user_agent, login_time, status) VALUES (?, ?, ?, NOW(), ?)',
-      [userId, ipAddress, userAgent, status]
+      [userId || null, ipAddress || null, userAgent || null, status || 'success']
     );
   }
 
@@ -173,12 +191,25 @@ class AuthService {
        if(orgs.length > 0) organization = orgs[0];
     }
 
+    let [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE user_id = ?', [user.id]);
+    if (emp.length === 0 && user.organization_id) {
+      [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE email = ? AND organization_id = ?', [user.email, user.organization_id]);
+      if (emp.length > 0) {
+        await db.execute('UPDATE employees SET user_id = ? WHERE id = ?', [user.id, emp[0].id]);
+      }
+    }
+    const employee_id = emp.length > 0 ? emp[0].id : null;
+    const employee_code = emp.length > 0 ? emp[0].employee_code : null;
+
     return {
       id: user.id,
       organization,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+      employee_id,
+      employee_code,
       roles: roles.map(r => r.name),
       permissions: Array.from(permissionsSet)
     };
@@ -228,6 +259,133 @@ class AuthService {
 
       await connection.commit();
       return { success: true };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async verifyActivationToken(token) {
+    if (!token) {
+      throw new Error('Activation token is required');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+    const [records] = await db.execute(
+      `SELECT aa.id, aa.organization_id, aa.user_id, aa.employee_id, aa.expires_at, aa.used_at,
+              u.email, u.first_name, u.last_name, u.status AS user_status,
+              e.employee_code, o.name AS organization_name
+       FROM account_activations aa
+       JOIN users u ON aa.user_id = u.id
+       JOIN employees e ON aa.employee_id = e.id
+       LEFT JOIN organizations o ON aa.organization_id = o.id
+       WHERE aa.token_hash = ?`,
+      [tokenHash]
+    );
+
+    if (records.length === 0) {
+      throw new Error('Invalid or non-existent activation link');
+    }
+
+    const record = records[0];
+
+    if (record.used_at) {
+      throw new Error('This activation link has already been used. Please log in.');
+    }
+
+    if (new Date(record.expires_at) < new Date()) {
+      throw new Error('This activation link has expired. Please contact your administrator to resend the invitation.');
+    }
+
+    if (record.user_status === 'active') {
+      throw new Error('Account is already active. Please log in.');
+    }
+
+    return {
+      email: record.email,
+      first_name: record.first_name,
+      last_name: record.last_name,
+      employee_code: record.employee_code,
+      organization_name: record.organization_name || 'Jatta M Kommerce'
+    };
+  }
+
+  async activateAccount(token, password) {
+    if (!token) {
+      throw new Error('Activation token is required');
+    }
+
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [records] = await connection.execute(
+        `SELECT aa.id, aa.organization_id, aa.user_id, aa.employee_id, aa.expires_at, aa.used_at,
+                u.email, u.first_name, u.last_name, u.status AS user_status
+         FROM account_activations aa
+         JOIN users u ON aa.user_id = u.id
+         WHERE aa.token_hash = ?
+         FOR UPDATE`,
+        [tokenHash]
+      );
+
+      if (records.length === 0) {
+        throw new Error('Invalid or non-existent activation token');
+      }
+
+      const record = records[0];
+
+      if (record.used_at) {
+        throw new Error('This activation token has already been used');
+      }
+
+      if (new Date(record.expires_at) < new Date()) {
+        throw new Error('This activation token has expired');
+      }
+
+      // Hash permanent password securely
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Update user account status to active
+      await connection.execute(
+        'UPDATE users SET password_hash = ?, status = "active", updated_at = NOW() WHERE id = ?',
+        [passwordHash, record.user_id]
+      );
+
+      // Invalidate current activation token
+      await connection.execute(
+        'UPDATE account_activations SET used_at = NOW() WHERE id = ?',
+        [record.id]
+      );
+
+      // Invalidate any other pending tokens for this user
+      await connection.execute(
+        'UPDATE account_activations SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL AND id != ?',
+        [record.user_id, record.id]
+      );
+
+      // Record audit log
+      await connection.execute(
+        'INSERT INTO audit_logs (organization_id, user_id, action, module, target_id) VALUES (?, ?, ?, ?, ?)',
+        [record.organization_id, record.user_id, 'ACCOUNT_ACTIVATED', 'auth', record.user_id]
+      );
+
+      await connection.commit();
+
+      return {
+        email: record.email,
+        first_name: record.first_name,
+        last_name: record.last_name
+      };
     } catch (error) {
       await connection.rollback();
       throw error;

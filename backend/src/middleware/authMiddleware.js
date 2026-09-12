@@ -2,7 +2,8 @@ const { verifyAccessToken } = require('../utils/tokenUtils');
 const db = require('../config/db');
 
 // Authenticate user by verifying JWT
-const authenticate = async (req, res, next) => { console.log("Auth MW start");
+const authenticate = async (req, res, next) => {
+
   try {
     let token;
     const authHeader = req.headers.authorization;
@@ -72,8 +73,16 @@ const authenticate = async (req, res, next) => { console.log("Auth MW start");
     ]);
 
     // Also fetch employee_id if this user is linked to an employee record
-    const [empRes] = await db.execute('SELECT id FROM employees WHERE user_id = ?', [user.id]);
-    const employee_id = empRes.length > 0 ? empRes[0].id : null;
+    let [empRes] = await db.execute('SELECT id FROM employees WHERE user_id = ?', [user.id]);
+    let employee_id = empRes.length > 0 ? empRes[0].id : null;
+    if (!employee_id && user.organization_id) {
+      // Auto-link by email if employee record exists with same email
+      const [byEmail] = await db.execute('SELECT id FROM employees WHERE email = ? AND organization_id = ?', [decoded.email || '', user.organization_id]);
+      if (byEmail.length > 0) {
+        employee_id = byEmail[0].id;
+        await db.execute('UPDATE employees SET user_id = ? WHERE id = ?', [user.id, employee_id]);
+      }
+    }
 
     // Attach verified context to req.user
     req.user = {

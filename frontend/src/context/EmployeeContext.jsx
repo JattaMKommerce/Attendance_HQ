@@ -1,253 +1,135 @@
 /**
  * EmployeeContext
  *
- * Provides a single shared data layer for all Employee Portal pages.
- * Avoids each page making the same API calls independently.
- *
- * Data sourced here:
- *   - Employee record (from /employees/:id using auth middleware employee_id)
- *   - Today's attendance status (check-in/out times)
- *   - Leave balances
- *   - Current shift assignment
- *   - Unread notification count
- *   - Next upcoming holiday
- *
- * Pages that need additional data (e.g. full attendance history) fetch
- * it locally — this context only carries the lightweight "always-needed" state.
+ * Provides a single live shared data layer for all Employee Portal pages.
+ * Directly backed by database APIs via /api/employee endpoints.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from './AuthContext';
 import { employeePortalApi } from '../services/employeePortalApi';
+import { Outlet } from 'react-router-dom';
 
 export const EmployeeContext = createContext(null);
 
-// ─── Static mock payloads (used when backend endpoint doesn't exist yet) ──────
-const MOCK_TODAY_ATTENDANCE = {
-  status: null,           // null | 'checked_in' | 'checked_out' | 'absent' | 'leave'
-  checkInTime: null,      // ISO string
-  checkOutTime: null,
-  workDurationMinutes: 0,
-  isLate: false,
-  lateMinutes: 0,
-  date: new Date().toISOString().split('T')[0],
-};
-
-const MOCK_LEAVE_BALANCE = [
-  { id: 1, name: 'Casual Leave',   code: 'CL', allocated: 12, used: 4,  balance: 8,  color: '#3b82f6' },
-  { id: 2, name: 'Sick Leave',     code: 'SL', allocated: 10, used: 5,  balance: 5,  color: '#10b981' },
-  { id: 3, name: 'Earned Leave',   code: 'EL', allocated: 15, used: 0,  balance: 15, color: '#f59e0b' },
-  { id: 4, name: 'Emergency Leave',code: 'EM', allocated: 2,  used: 0,  balance: 2,  color: '#ef4444' },
-];
-
-const MOCK_SHIFT = {
-  id: 1,
-  name: 'General Shift',
-  startTime: '09:00',
-  endTime: '18:00',
-  breakMinutes: 60,
-};
-
-const MOCK_NEXT_HOLIDAY = {
-  name: 'Gandhi Jayanti',
-  date: '2026-10-02',
-  dayName: 'Friday',
-  daysAway: null, // computed below
-};
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: 'Leave Request Approved',
-    message: 'Your casual leave for Sep 15–17 has been approved.',
-    type: 'leave',
-    isRead: false,
-    actionUrl: '/app/employee/leave',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    title: 'Payslip Available',
-    message: 'Your August 2026 payslip is now ready.',
-    type: 'payslip',
-    isRead: false,
-    actionUrl: '/app/employee/payslips',
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-// ─── Helper: compute days away for a given date string ─────────────────────
-function daysUntil(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target - today) / (1000 * 60 * 60 * 24));
-}
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 export const EmployeeProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   const [employeeRecord, setEmployeeRecord] = useState(null);
-  const [todayAttendance, setTodayAttendance] = useState(MOCK_TODAY_ATTENDANCE);
-  const [leaveBalance, setLeaveBalance] = useState(MOCK_LEAVE_BALANCE);
-  const [shift, setShift] = useState(MOCK_SHIFT);
-  const [nextHoliday, setNextHoliday] = useState({
-    ...MOCK_NEXT_HOLIDAY,
-    daysAway: daysUntil(MOCK_NEXT_HOLIDAY.date),
-  });
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [leaveBalance, setLeaveBalance] = useState([]);
+  const [shift, setShift] = useState(null);
+  const [nextHoliday, setNextHoliday] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [latestPayslip, setLatestPayslip] = useState(null);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(1);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Derived
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // Derived unread count
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // ─── Load employee record ─────────────────────────────────────────────────
-  const loadEmployeeRecord = useCallback(async () => {
-    if (!user?.employee_id) return;
+  // Load aggregated dashboard
+  const loadDashboardData = useCallback(async () => {
     try {
-      const res = await employeePortalApi.getMyEmployee(user.employee_id);
-      if (res.data?.success) setEmployeeRecord(res.data.data.employee);
-    } catch (_) {
-      // employee_id may be null for admin users; silently ignore
-    }
-  }, [user]);
-
-  // ─── Load today's attendance ──────────────────────────────────────────────
-  const loadTodayAttendance = useCallback(async () => {
-    try {
-      const res = await employeePortalApi.getTodayAttendance();
-      if (res.data?.success) setTodayAttendance(res.data.data);
-    } catch (_) {
-      // [BACKEND REQUIRED] – keep mock
+      const res = await employeePortalApi.getDashboard();
+      if (res.data?.success) {
+        const d = res.data.data;
+        setTodayAttendance(d.todayAttendance);
+        setLeaveBalance(d.leaveBalances || []);
+        setShift(d.shift);
+        setNextHoliday(d.nextHoliday);
+        setAnnouncements(d.announcements || []);
+        setLatestPayslip(d.latestPayslip);
+        setPendingRequestsCount(d.pendingLeavesCount || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
     }
   }, []);
 
-  // ─── Load leave balance ───────────────────────────────────────────────────
-  const loadLeaveBalance = useCallback(async () => {
+  // Load employee profile
+  const loadEmployeeProfile = useCallback(async () => {
     try {
-      const res = await employeePortalApi.getMyLeaveBalance();
-      if (res.data?.success) setLeaveBalance(res.data.data);
-    } catch (_) {
-      // [BACKEND REQUIRED] – keep mock
+      const res = await employeePortalApi.getMyProfile();
+      if (res.data?.success) {
+        setEmployeeRecord(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load employee profile:', err);
     }
   }, []);
 
-  // ─── Load shift ───────────────────────────────────────────────────────────
-  const loadShift = useCallback(async () => {
-    try {
-      const res = await employeePortalApi.getMyShift();
-      if (res.data?.success) setShift(res.data.data);
-    } catch (_) {
-      // [BACKEND REQUIRED] – keep mock
-    }
-  }, []);
-
-  // ─── Load notifications ───────────────────────────────────────────────────
+  // Load notifications
   const loadNotifications = useCallback(async () => {
     try {
       const res = await employeePortalApi.getMyNotifications();
-      if (res.data?.success) setNotifications(res.data.data);
-    } catch (_) {
-      // [BACKEND REQUIRED] – keep mock
-    }
-  }, []);
-
-  // ─── Load next holiday ────────────────────────────────────────────────────
-  const loadNextHoliday = useCallback(async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const res = await employeePortalApi.getHolidays({ limit: 1, after: today });
-      if (res.data?.success && res.data.data?.length > 0) {
-        const h = res.data.data[0];
-        setNextHoliday({
-          name: h.name,
-          date: h.holiday_date,
-          dayName: new Date(h.holiday_date).toLocaleDateString('en-US', { weekday: 'long' }),
-          daysAway: daysUntil(h.holiday_date),
-        });
+      if (res.data?.success) {
+        setNotifications(res.data.data);
       }
-    } catch (_) {
-      // keep mock
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
     }
   }, []);
 
-  // ─── Load latest payslip ──────────────────────────────────────────────────
-  const loadLatestPayslip = useCallback(async () => {
+  // Today's attendance refresh
+  const loadTodayAttendance = useCallback(async () => {
     try {
-      const res = await employeePortalApi.getMyPayslips({ limit: 1 });
-      if (res.data?.success && res.data.data?.length > 0) {
-        setLatestPayslip(res.data.data[0]);
+      const res = await employeePortalApi.getTodayAttendance();
+      if (res.data?.success) {
+        setTodayAttendance(res.data.data);
       }
-    } catch (_) {
-      // [BACKEND REQUIRED]
+    } catch (err) {
+      console.error('Failed to load today attendance:', err);
     }
   }, []);
 
-  // ─── Check-in action (called by Dashboard / Attendance pages) ────────────
-  const checkIn = useCallback(async () => {
+  // Leave balance refresh
+  const loadLeaveBalance = useCallback(async () => {
+    try {
+      const res = await employeePortalApi.getMyLeaveBalance();
+      if (res.data?.success) {
+        setLeaveBalance(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load leave balance:', err);
+    }
+  }, []);
+
+  // Check-in action
+  const checkIn = useCallback(async (source = 'mobile') => {
     try {
       const now = new Date().toISOString();
-      await employeePortalApi.checkIn({ timestamp: now });
-      setTodayAttendance((prev) => ({
-        ...prev,
-        status: 'checked_in',
-        checkInTime: now,
-      }));
-      return { success: true, time: now };
+      const res = await employeePortalApi.checkIn({ timestamp: now, source });
+      if (res.data?.success) {
+        setTodayAttendance(res.data.data);
+      }
+      return res.data;
     } catch (err) {
-      // [BACKEND REQUIRED] – optimistic local update
-      const now = new Date().toISOString();
-      setTodayAttendance((prev) => ({
-        ...prev,
-        status: 'checked_in',
-        checkInTime: now,
-      }));
-      return { success: true, time: now, mock: true };
+      console.error('Check-in failed:', err);
+      throw err;
     }
   }, []);
 
-  // ─── Check-out action ────────────────────────────────────────────────────
-  const checkOut = useCallback(async () => {
+  // Check-out action
+  const checkOut = useCallback(async (source = 'mobile') => {
     try {
       const now = new Date().toISOString();
-      await employeePortalApi.checkOut({ timestamp: now });
-      setTodayAttendance((prev) => {
-        const inTime = prev.checkInTime ? new Date(prev.checkInTime) : null;
-        const outTime = new Date(now);
-        const mins = inTime ? Math.round((outTime - inTime) / 60000) : 0;
-        return {
-          ...prev,
-          status: 'checked_out',
-          checkOutTime: now,
-          workDurationMinutes: mins,
-        };
-      });
-      return { success: true, time: now };
+      const res = await employeePortalApi.checkOut({ timestamp: now, source });
+      if (res.data?.success) {
+        setTodayAttendance(res.data.data);
+      }
+      return res.data;
     } catch (err) {
-      const now = new Date().toISOString();
-      setTodayAttendance((prev) => {
-        const inTime = prev.checkInTime ? new Date(prev.checkInTime) : null;
-        const outTime = new Date(now);
-        const mins = inTime ? Math.round((outTime - inTime) / 60000) : 0;
-        return {
-          ...prev,
-          status: 'checked_out',
-          checkOutTime: now,
-          workDurationMinutes: mins,
-        };
-      });
-      return { success: true, time: now, mock: true };
+      console.error('Check-out failed:', err);
+      throw err;
     }
   }, []);
 
-  // ─── Mark notification read ───────────────────────────────────────────────
+  // Mark notification read
   const markRead = useCallback(async (id) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
     try {
       await employeePortalApi.markNotificationRead(id);
@@ -255,69 +137,62 @@ export const EmployeeProvider = ({ children }) => {
   }, []);
 
   const markAllRead = useCallback(async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     try {
       await employeePortalApi.markAllNotificationsRead();
     } catch (_) {}
   }, []);
 
-  // ─── Initial load ─────────────────────────────────────────────────────────
+  // Initial load
   useEffect(() => {
     if (!user) return;
-    const isEmployee =
-      user.roles.includes('EMPLOYEE') &&
-      !user.roles.includes('ORG_ADMIN') &&
-      !user.roles.includes('HR_ADMIN');
+    const isEmployee = user.roles && user.roles.includes('EMPLOYEE');
     if (!isEmployee) {
       setLoading(false);
       return;
     }
+
     (async () => {
       setLoading(true);
       await Promise.allSettled([
-        loadEmployeeRecord(),
-        loadTodayAttendance(),
-        loadLeaveBalance(),
-        loadShift(),
-        loadNotifications(),
-        loadNextHoliday(),
-        loadLatestPayslip(),
+        loadDashboardData(),
+        loadEmployeeProfile(),
+        loadNotifications()
       ]);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, loadDashboardData, loadEmployeeProfile, loadNotifications]);
 
   const value = {
-    // Data
     employeeRecord,
     todayAttendance,
     leaveBalance,
     shift,
     nextHoliday,
+    announcements,
     notifications,
     unreadCount,
     latestPayslip,
     pendingRequestsCount,
     loading,
-    // Actions
     checkIn,
     checkOut,
     markRead,
     markAllRead,
-    // Refresh individual slices
+    refreshDashboard: loadDashboardData,
     refreshAttendance: loadTodayAttendance,
     refreshLeaveBalance: loadLeaveBalance,
+    refreshProfile: loadEmployeeProfile,
     refreshNotifications: loadNotifications,
   };
 
   return (
     <EmployeeContext.Provider value={value}>
-      {children}
+      {children || <Outlet />}
     </EmployeeContext.Provider>
   );
 };
 
-/** Convenience hook */
 export const useEmployee = () => {
   const ctx = useContext(EmployeeContext);
   if (!ctx) throw new Error('useEmployee must be used inside <EmployeeProvider>');

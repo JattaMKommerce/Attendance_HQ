@@ -183,22 +183,19 @@ const PasswordTab = ({ setSuccess, setError }) => {
     try {
       setLoading(true);
       
-      // In production:
-      // await employeePortalApi.changePassword({
-      //   currentPassword: formData.currentPassword,
-      //   newPassword: formData.newPassword
-      // });
-
-      // Mock success
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setSuccess('Password changed successfully!');
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      const res = await employeePortalApi.changePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword
       });
 
+      if (res.data?.success) {
+        setSuccess('Password changed successfully!');
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Error changing password:', err);

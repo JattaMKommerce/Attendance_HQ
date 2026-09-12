@@ -19,6 +19,7 @@ router.get('/', authorizePermission('employee.view'), employeeController.getEmpl
 router.get('/:id', authorizePermission('employee.view'), employeeController.getEmployeeById);
 router.get('/:id/id-card', authorizePermission('employee.view'), employeeController.getEmployeeIdCard);
 router.post('/', authorizePermission('employee.create'), employeeController.createEmployee);
+router.post('/:id/resend-invite', authorizePermission('employee.create'), employeeController.resendInvitation);
 router.put('/:id', authorizePermission('employee.update'), employeeController.updateEmployee);
 router.patch('/:id/status', authorizePermission('employee.manage_status'), employeeController.updateEmployeeStatus);
 

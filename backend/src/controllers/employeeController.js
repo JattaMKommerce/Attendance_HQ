@@ -46,14 +46,14 @@ class EmployeeController {
       const organizationId = req.user.organization_id;
       const employeeData = req.body;
 
-      // Basic required field validation
-      if (!employeeData.first_name || !employeeData.last_name || !employeeData.email || !employeeData.employee_code || !employeeData.joining_date) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
+      // Basic required field validation (employee_code is optional as backend auto-generates if omitted)
+      if (!employeeData.first_name || !employeeData.last_name || !employeeData.email || !employeeData.joining_date) {
+        return res.status(400).json({ success: false, message: 'First name, last name, official email, and joining date are required' });
       }
 
       // Check for whitespace only
-      if (employeeData.first_name.trim() === '' || employeeData.last_name.trim() === '') {
-        return res.status(400).json({ success: false, message: 'Name cannot be empty' });
+      if (employeeData.first_name.trim() === '' || employeeData.last_name.trim() === '' || employeeData.email.trim() === '') {
+        return res.status(400).json({ success: false, message: 'Name and email cannot be empty' });
       }
 
       // Check terms and conditions
@@ -63,14 +63,45 @@ class EmployeeController {
 
       const result = await employeeService.createEmployee(organizationId, employeeData);
       
+      const message = result.email_status === 'SENT'
+        ? 'Employee created successfully and onboarding invitation sent.'
+        : result.email_status === 'SAVED_NO_EMAIL'
+        ? 'Employee created and saved successfully.'
+        : 'Employee created successfully. Email delivery was not completed, but invitation link is available.';
+
       res.status(201).json({
         success: true,
-        message: 'Employee created successfully',
+        message,
         data: result
       });
     } catch (error) {
       if (error.message.includes('already exists')) {
         return res.status(409).json({ success: false, message: error.message });
+      }
+      next(error);
+    }
+  }
+
+  async resendInvitation(req, res, next) {
+    try {
+      const organizationId = req.user.organization_id;
+      const employeeId = req.params.id;
+
+      const result = await employeeService.resendInvitation(organizationId, employeeId);
+
+      res.status(200).json({
+        success: true,
+        message: result.email_status === 'SENT'
+          ? 'Onboarding invitation email resent successfully.'
+          : 'New activation link generated, but email delivery was not completed.',
+        data: result
+      });
+    } catch (error) {
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      if (error.message.includes('already active')) {
+        return res.status(400).json({ success: false, message: error.message });
       }
       next(error);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, IndianRupee, Building2 } from 'lucide-react';
-import { createEmployee, getLookups, uploadPhoto, uploadDocument, uploadResume } from '../../services/employeeApi';
+import { ArrowLeft, Save, Plus, Trash2, IndianRupee, Building2, CheckCircle, Send, RefreshCw, Copy, Check, Mail, ExternalLink, AlertTriangle } from 'lucide-react';
+import { createEmployee, getLookups, uploadPhoto, uploadDocument, uploadResume, resendInvitation } from '../../services/employeeApi';
 import { State, City } from 'country-state-city';
 import FileUploader from '../../components/common/FileUploader';
 import '../../styles/components.css';
@@ -43,18 +43,25 @@ const SalaryInput = ({ label, name, value, onChange, disabled = false, isPercent
 const AddEmployee = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [lookups, setLookups] = useState({ departments: [], designations: [] });
+  const [loadingAction, setLoadingAction] = useState(null); // 'save' | 'email'
+  const [lookups, setLookups] = useState({ departments: [], designations: [], managers: [] });
   const [lookupsError, setLookupsError] = useState(null);
   const [error, setError] = useState(null);
+  const [createdSuccess, setCreatedSuccess] = useState(null);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedDownload, setCopiedDownload] = useState(false);
 
   const defaultSalary = { gross_salary: '', basic_salary: '', hra: '', special_allowance: '', deductions: '', esi_percentage: '0.75', pf_percentage: '12.00', monthly_paid_leaves: '2', other_allowance: '', professional_tax: '', advances: '', incentives: '' };
   const defaultBank = { bank_name: '', account_number: '', ifsc_code: '' };
 
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     first_name: '', last_name: '', email: '', phone: '',
     employee_code: '', joining_date: new Date().toISOString().split('T')[0],
     gender: '', blood_group: '', employment_type: 'full_time', date_of_birth: '',
-    department_id: '', designation_id: '',
+    department_id: '', designation_id: '', manager_id: '',
     current_address: '', permanent_address: '',
     emergency_contact_name: '', emergency_contact_phone: '',
     uan_number: '', experience_type: 'fresher',
@@ -62,7 +69,9 @@ const AddEmployee = () => {
     office_state: '', office_city: '',
     experiences: [], education: [], documents: [],
     ...defaultSalary, ...defaultBank
-  });
+  };
+
+  const [formData, setFormData] = useState(defaultFormData);
 
   const [photoPreview, setPhotoPreview] = useState(null);
   const [resumeName, setResumeName] = useState(null);
@@ -154,17 +163,104 @@ const AddEmployee = () => {
     return (gross - deductions - profTax - advances).toFixed(2);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); setError(null);
-    if (!formData.terms_accepted) { setError('You must accept the terms and conditions.'); setLoading(false); return; }
+  const handleSubmit = async (e, sendEmail = false) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setLoading(true);
+    setLoadingAction(sendEmail ? 'email' : 'save');
+    setError(null);
+
+    if (!formData.terms_accepted) {
+      setError('You must accept the terms and conditions.');
+      setLoading(false);
+      setLoadingAction(null);
+      return;
+    }
+
     try {
-      const payload = { ...formData };
-      ['department_id', 'designation_id', 'gender', 'blood_group', 'office_state', 'office_city'].forEach(k => { if (!payload[k]) payload[k] = null; });
+      const payload = { ...formData, send_onboarding_email: sendEmail };
+      ['department_id', 'designation_id', 'manager_id', 'gender', 'blood_group', 'office_state', 'office_city'].forEach(k => { if (!payload[k]) payload[k] = null; });
       if (payload.experience_type === 'fresher') payload.experiences = [];
       const res = await createEmployee(payload);
-      if (res.success) navigate(`/app/employees/${res.data.id}`);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create employee'); }
-    finally { setLoading(false); }
+      if (res.success) {
+        setCreatedSuccess(res.data);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // If "Send Onboarding Email" was clicked, open Gmail compose in a new tab if URL available
+        if (sendEmail && res.data.gmail_compose_url) {
+          try {
+            window.open(res.data.gmail_compose_url, '_blank', 'noopener,noreferrer');
+          } catch (e) {
+            console.warn('Could not auto-open Gmail popup window:', e);
+          }
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create employee');
+    } finally {
+      setLoading(false);
+      setLoadingAction(null);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!createdSuccess?.id) return;
+    setResendingEmail(true);
+    setResendFeedback(null);
+    try {
+      const res = await resendInvitation(createdSuccess.id);
+      if (res.success) {
+        setCreatedSuccess(prev => ({
+          ...prev,
+          email_status: res.data.email_status,
+          email_error: res.data.email_error,
+          token: res.data.token || prev.token,
+          app_download_url: res.data.app_download_url || prev.app_download_url,
+          activation_link: res.data.activation_link || prev.activation_link,
+          gmail_compose_url: res.data.gmail_compose_url || prev.gmail_compose_url
+        }));
+        if (res.data.gmail_compose_url) {
+          try {
+            window.open(res.data.gmail_compose_url, '_blank', 'noopener,noreferrer');
+          } catch (e) {
+            console.warn('Could not auto-open Gmail popup window:', e);
+          }
+        }
+        setResendFeedback({
+          type: res.data.email_status === 'SENT' ? 'success' : 'warning',
+          text: res.data.email_status === 'SENT' 
+            ? 'Onboarding invitation email with login credentials & app download link sent successfully!'
+            : 'New activation link and token generated. Direct Gmail link ready below.'
+        });
+      }
+    } catch (err) {
+      setResendFeedback({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to send invitation email.'
+      });
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
+  const copyActivationLink = () => {
+    if (!createdSuccess?.activation_link) return;
+    navigator.clipboard.writeText(createdSuccess.activation_link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  const copyToken = () => {
+    if (!createdSuccess?.token) return;
+    navigator.clipboard.writeText(createdSuccess.token);
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 3000);
+  };
+
+  const copyDownloadLink = () => {
+    if (!createdSuccess?.app_download_url) return;
+    navigator.clipboard.writeText(createdSuccess.app_download_url);
+    setCopiedDownload(true);
+    setTimeout(() => setCopiedDownload(false), 3000);
   };
 
   const sectionHeader = (title, icon) => (
@@ -189,7 +285,383 @@ const AddEmployee = () => {
       {error && <div style={{ padding: '12px 16px', color: 'var(--danger)', backgroundColor: '#fff1f1', border: '1px solid #fecaca', marginBottom: '20px', borderRadius: '8px' }}>{error}</div>}
       {lookupsError && <div style={{ padding: '12px 16px', color: '#d97706', backgroundColor: '#fffbeb', border: '1px solid #fde68a', marginBottom: '20px', borderRadius: '8px' }}>⚠️ {lookupsError}</div>}
 
-      <form onSubmit={handleSubmit}>
+      {createdSuccess ? (
+        <div className="card" style={{ padding: '36px 24px', textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            width: '68px',
+            height: '68px',
+            borderRadius: '50%',
+            backgroundColor: '#ecfdf5',
+            color: '#10b981',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <CheckCircle size={38} />
+          </div>
+
+          <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px', color: '#0f172a' }}>
+            {createdSuccess.email_status === 'SAVED_NO_EMAIL'
+              ? 'Employee Record Saved Successfully'
+              : 'Employee & Account Created Successfully'}
+          </h2>
+          <p style={{ fontSize: '15px', color: '#64748b', margin: '0 0 28px', maxWidth: '560px', marginLeft: 'auto', marginRight: 'auto' }}>
+            {createdSuccess.email_status === 'SAVED_NO_EMAIL'
+              ? 'The employee profile and official user account have been created and saved. You can dispatch onboarding login credentials now or open directly in Gmail.'
+              : 'The employee record has been saved, an official user account has been provisioned, and onboarding credentials have been processed.'}
+          </p>
+
+          {/* Details Grid */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '680px',
+            margin: '0 auto 24px',
+            textAlign: 'left',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '20px'
+          }}>
+            <div>
+              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Employee Name</span>
+              <strong style={{ fontSize: '16px', color: '#0f172a' }}>{createdSuccess.first_name} {createdSuccess.last_name}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Official Employee ID</span>
+              <span style={{
+                display: 'inline-block',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '15px',
+                border: '1px solid #bfdbfe'
+              }}>
+                {createdSuccess.employee_code}
+              </span>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Official Login Email</span>
+              <strong style={{ fontSize: '15px', color: '#0f172a' }}>{createdSuccess.email}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Account & Activation Status</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{
+                  display: 'inline-block',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  border: '1px solid #fde68a'
+                }}>
+                  Status: {createdSuccess.account_status}
+                </span>
+                <span style={{
+                  display: 'inline-block',
+                  backgroundColor: '#f1f5f9',
+                  color: '#475569',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  Activation: {createdSuccess.activation_status}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '6px' }}>Onboarding Email Delivery Status</span>
+              {createdSuccess.email_status === 'SENT' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontSize: '14px', fontWeight: 600 }}>
+                  <CheckCircle size={18} />
+                  <span>Onboarding email with login credentials sent successfully to {createdSuccess.email}.</span>
+                </div>
+              ) : createdSuccess.email_status === 'SAVED_NO_EMAIL' ? (
+                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1d4ed8', fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
+                    <CheckCircle size={18} />
+                    <span>Saved in System (No automated email sent yet)</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', lineHeight: 1.5 }}>
+                    The employee record and credentials are fully saved. Click <strong>Send Onboarding Email Now</strong> or <strong>Open in Gmail</strong> below to dispatch credentials.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
+                    <AlertTriangle size={18} />
+                    <span>Email Delivery Pending / Notice:</span>
+                  </div>
+                  <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#78350f', lineHeight: 1.5 }}>
+                    {createdSuccess.email_error || 'SMTP/Gmail credentials not active in environment. The account is safely created.'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#92400e' }}>
+                    💡 You can click <strong>Open in Gmail</strong> below to send the login credentials directly from your Gmail account!
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Feedback from resend */}
+          {resendFeedback && (
+            <div style={{
+              maxWidth: '680px',
+              margin: '0 auto 20px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              backgroundColor: resendFeedback.type === 'success' ? '#ecfdf5' : '#fffbeb',
+              color: resendFeedback.type === 'success' ? '#065f46' : '#92400e',
+              border: `1px solid ${resendFeedback.type === 'success' ? '#a7f3d0' : '#fde68a'}`,
+              textAlign: 'center'
+            }}>
+              {resendFeedback.text}
+            </div>
+          )}
+
+          {/* Activation link for manual / development verification */}
+          {createdSuccess.activation_link && (
+            <div style={{
+              maxWidth: '680px',
+              margin: '0 auto 28px',
+              padding: '16px 20px',
+              backgroundColor: '#f1f5f9',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                  Secure Activation Link (Valid for 48 hours):
+                </span>
+                <button
+                  type="button"
+                  onClick={copyActivationLink}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    color: '#2563eb',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  {copied ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
+                  {copied ? 'Copied!' : 'Copy Link'}
+                </button>
+              </div>
+              <input
+                type="text"
+                readOnly
+                value={createdSuccess.activation_link}
+                className="input-control"
+                style={{ fontSize: '12px', backgroundColor: '#ffffff', color: '#475569' }}
+                onClick={(e) => e.target.select()}
+              />
+              <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                The employee creates their own permanent password upon clicking this link. The token is single-use.
+              </span>
+            </div>
+          )}
+
+          {/* Token & App Download Box */}
+          {(createdSuccess.token || createdSuccess.app_download_url) && (
+            <div style={{
+              maxWidth: '680px',
+              margin: '0 auto 28px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '16px',
+              textAlign: 'left'
+            }}>
+              {/* Token Card */}
+              {createdSuccess.token && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      🔑 Activation Token:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyToken}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        color: '#2563eb',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {copiedToken ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
+                      {copiedToken ? 'Copied!' : 'Copy Token'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value={createdSuccess.token}
+                    className="input-control"
+                    style={{ fontSize: '12px', backgroundColor: '#f8fafc', color: '#1e293b', fontFamily: 'monospace' }}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                    Cryptographic token valid for 48 hours.
+                  </span>
+                </div>
+              )}
+
+              {/* Mobile App Download Card */}
+              {createdSuccess.app_download_url && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      📱 App Download Link:
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <a
+                        href={createdSuccess.app_download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '12px', color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px', textDecoration: 'none' }}
+                      >
+                        Open <ExternalLink size={12} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={copyDownloadLink}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px',
+                          color: '#2563eb',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        {copiedDownload ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
+                        {copiedDownload ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value={createdSuccess.app_download_url}
+                    className="input-control"
+                    style={{ fontSize: '12px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                    Link for employee to install mobile app on phone.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {createdSuccess.gmail_compose_url && (
+              <a
+                href={createdSuccess.gmail_compose_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#ffffff',
+                  borderColor: '#ea4335',
+                  color: '#ea4335',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  boxShadow: '0 1px 2px rgba(234, 67, 53, 0.1)'
+                }}
+              >
+                <Mail size={16} color="#ea4335" />
+                Open in Gmail
+                <ExternalLink size={14} color="#ea4335" />
+              </a>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleResend}
+              disabled={resendingEmail}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
+            >
+              <RefreshCw size={16} className={resendingEmail ? 'spin' : ''} />
+              {resendingEmail 
+                ? 'Sending Invitation...' 
+                : createdSuccess.email_status === 'SAVED_NO_EMAIL' 
+                ? 'Send Onboarding Email Now' 
+                : 'Resend Onboarding Email'}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setCreatedSuccess(null);
+                setFormData(defaultFormData);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={16} />
+              Add Another Employee
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => navigate(`/app/employees/${createdSuccess.id}`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              View Employee Profile
+              <ExternalLink size={16} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
 
         {/* Photo & Resume */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -241,7 +713,20 @@ const AddEmployee = () => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header"><h3 className="card-title">Employment Information</h3></div>
           <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="input-group"><label className="input-label">Employee Code *</label><input type="text" name="employee_code" className="input-control" value={formData.employee_code} onChange={handleChange} required /></div>
+            <div className="input-group">
+              <label className="input-label">Employee ID</label>
+              <input
+                type="text"
+                name="employee_code"
+                className="input-control"
+                value={formData.employee_code}
+                onChange={handleChange}
+                placeholder="Auto-generated if blank (e.g. EMP-001)"
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Leave blank to auto-generate sequentially.
+              </span>
+            </div>
             <div className="input-group"><label className="input-label">Joining Date *</label><input type="date" name="joining_date" className="input-control" value={formData.joining_date} onChange={handleChange} required /></div>
             <div className="input-group">
               <label className="input-label">Department {lookups.departments.length === 0 && lookupsError ? '⚠️' : ''}</label>
@@ -256,6 +741,17 @@ const AddEmployee = () => {
               <select name="designation_id" className="input-control" value={formData.designation_id} onChange={handleChange}>
                 <option value="">Select Designation</option>
                 {lookups.designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Reporting Manager</label>
+              <select name="manager_id" className="input-control" value={formData.manager_id || ''} onChange={handleChange}>
+                <option value="">Select Reporting Manager (Optional)</option>
+                {lookups.managers && lookups.managers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.first_name} {m.last_name} ({m.employee_code})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="input-group"><label className="input-label">Employment Type *</label>
@@ -463,13 +959,40 @@ const AddEmployee = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/app/employees')} disabled={loading}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={loading || !formData.terms_accepted}>
-            <Save size={16} /> {loading ? 'Saving...' : 'Save Employee'}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={() => navigate('/app/employees')} 
+            disabled={loading}
+          >
+            Cancel
+          </button>
+
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={(e) => handleSubmit(e, false)} 
+            disabled={loading || !formData.terms_accepted}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
+          >
+            <Save size={16} />
+            {loading && loadingAction === 'save' ? 'Saving Employee...' : 'Save'}
+          </button>
+
+          <button 
+            type="button" 
+            className="btn btn-primary" 
+            onClick={(e) => handleSubmit(e, true)} 
+            disabled={loading || !formData.terms_accepted}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
+          >
+            <Send size={16} />
+            {loading && loadingAction === 'email' ? 'Sending Onboarding Email...' : 'Send Onboarding Email'}
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 };

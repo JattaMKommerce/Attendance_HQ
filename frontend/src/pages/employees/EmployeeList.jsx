@@ -123,16 +123,24 @@ const EmployeeList = () => {
                     <td>{emp.department_name || '-'}</td>
                     <td>{emp.designation_name || '-'}</td>
                     <td>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: '12px', 
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        backgroundColor: emp.status === 'active' ? 'var(--success-bg)' : 'var(--warning-bg)',
-                        color: emp.status === 'active' ? 'var(--success-text)' : 'var(--warning-text)'
-                      }}>
-                        {emp.status.charAt(0).toUpperCase() + emp.status.slice(1).replace('_', ' ')}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ 
+                          padding: '3px 8px', 
+                          borderRadius: '12px', 
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          width: 'fit-content',
+                          backgroundColor: emp.status === 'active' ? 'var(--success-bg)' : 'var(--warning-bg)',
+                          color: emp.status === 'active' ? 'var(--success-text)' : 'var(--warning-text)'
+                        }}>
+                          {emp.status.charAt(0).toUpperCase() + emp.status.slice(1).replace('_', ' ')}
+                        </span>
+                        {emp.user_status === 'inactive' && (
+                          <span style={{ fontSize: '10px', color: '#b45309', fontWeight: 600 }}>
+                            ⏳ Invite Pending
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

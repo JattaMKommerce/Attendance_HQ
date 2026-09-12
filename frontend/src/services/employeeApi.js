@@ -30,6 +30,11 @@ export const updateEmployeeStatus = async (id, status) => {
   return response.data;
 };
 
+export const resendInvitation = async (id) => {
+  const response = await api.post(`/employees/${id}/resend-invite`);
+  return response.data;
+};
+
 export const getLookups = async () => {
   const response = await api.get('/employees/lookups');
   return response.data;

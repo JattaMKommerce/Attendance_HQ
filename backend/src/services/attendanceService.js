@@ -147,7 +147,10 @@ class AttendanceService {
       // Strict late logic for table
       if (currentStatus === 'present' || currentStatus === 'half_day') {
         if (r.check_in_time) {
-          const timeParts = r.check_in_time.split(':');
+          const checkInStr = typeof r.check_in_time === 'string' 
+            ? r.check_in_time 
+            : (r.check_in_time instanceof Date ? r.check_in_time.toTimeString() : String(r.check_in_time));
+          const timeParts = checkInStr.split(':');
           if (timeParts.length >= 2) {
             const hours = parseInt(timeParts[0], 10);
             const minutes = parseInt(timeParts[1], 10);

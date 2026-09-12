@@ -35,6 +35,7 @@ import {
   HeartHandshake,
   LogOut,
   Banknote,
+  Megaphone,
 } from 'lucide-react';
 
 // ── Employee Portal Navigation ─────────────────────────────────────────────
@@ -44,8 +45,11 @@ export const employeeNavigation = [
     items: [
       { label: 'Dashboard',        path: '/app/employee/dashboard',    icon: LayoutDashboard, roles: ['EMPLOYEE'] },
       { label: 'My Attendance',    path: '/app/employee/attendance',   icon: Clock,           roles: ['EMPLOYEE'] },
-      { label: 'My Shift & Roster',path: '/app/employee/roster',       icon: CalendarDays,    roles: ['EMPLOYEE'] },
       { label: 'My Leave',         path: '/app/employee/leave',        icon: Umbrella,        roles: ['EMPLOYEE'] },
+      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: DollarSign,      roles: ['EMPLOYEE'] },
+      { label: 'My Documents',     path: '/app/employee/documents',    icon: FileText,        roles: ['EMPLOYEE'] },
+      { label: 'Announcements',    path: '/app/employee/announcements',icon: Megaphone,       roles: ['EMPLOYEE'] },
+      { label: 'My Shift & Roster',path: '/app/employee/roster',       icon: CalendarDays,    roles: ['EMPLOYEE'] },
       { label: 'Company Calendar', path: '/app/employee/calendar',     icon: Calendar,        roles: ['EMPLOYEE'] },
     ],
   },
@@ -53,16 +57,7 @@ export const employeeNavigation = [
     group: 'My Information',
     items: [
       { label: 'My Profile',       path: '/app/employee/profile',      icon: User,            roles: ['EMPLOYEE'] },
-      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: DollarSign,      roles: ['EMPLOYEE'] },
-      { label: 'My Documents',     path: '/app/employee/documents',    icon: FileText,        roles: ['EMPLOYEE'] },
-      { label: 'My Requests',      path: '/app/employee/requests',     icon: ClipboardList,   roles: ['EMPLOYEE'] },
-    ],
-  },
-  {
-    group: 'People & Tools',
-    items: [
       { label: 'Directory',        path: '/app/employee/directory',    icon: Users,           roles: ['EMPLOYEE'] },
-      { label: 'AI Assistant',     path: '/app/employee/ai',           icon: MessageSquare,   roles: ['EMPLOYEE'] },
       { label: 'Notifications',    path: '/app/employee/notifications',icon: Bell,            roles: ['EMPLOYEE'] },
       { label: 'Settings',         path: '/app/employee/settings',     icon: Settings,        roles: ['EMPLOYEE'] },
     ],

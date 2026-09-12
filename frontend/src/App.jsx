@@ -1,9 +1,13 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { EmployeeProvider } from './context/EmployeeContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Login from './pages/auth/Login';
+import ActivateAccount from './pages/auth/ActivateAccount';
+import AppDownload from './pages/download/AppDownload';
 import AppShell from './components/layout/AppShell';
+import MobileEmployeeLayout from './components/layout/MobileEmployeeLayout';
 
 // Dashboards
 import Dashboard from './pages/dashboard/Dashboard';
@@ -29,7 +33,9 @@ import {
   MyPayslips,
   MyDocuments,
   EmployeeDirectory,
-  MySettings
+  MySettings,
+  Announcements,
+  More
 } from './pages/employee';
 
 // Management Modules
@@ -125,6 +131,9 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/activate" element={<ActivateAccount />} />
+      <Route path="/download" element={<AppDownload />} />
+      <Route path="/install" element={<AppDownload />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       
       {/* Root redirect based on role */}
@@ -170,20 +179,23 @@ const AppRoutes = () => {
           <Route path="lifecycle/settlement" element={<FinalSettlement />} />
           
           {/* Employee Portal Routes */}
-          <Route path="employee/dashboard" element={<EmployeeDashboard />} />
-          <Route path="employee/profile" element={<MyProfile />} />
-          <Route path="employee/attendance" element={<MyAttendance />} />
-          <Route path="employee/roster" element={<Roster />} />
-          <Route path="employee/leave" element={<MyLeave />} />
-          <Route path="employee/leave/apply" element={<ApplyLeave />} />
-          <Route path="employee/calendar" element={<Placeholder title="Company Calendar" />} />
-          <Route path="employee/payslips" element={<MyPayslips />} />
-          <Route path="employee/documents" element={<MyDocuments />} />
-          <Route path="employee/requests" element={<Placeholder title="My Requests" />} />
-          <Route path="employee/directory" element={<EmployeeDirectory />} />
-          <Route path="employee/ai" element={<Placeholder title="AI Assistant" />} />
-          <Route path="employee/notifications" element={<Placeholder title="Notifications" />} />
-          <Route path="employee/settings" element={<MySettings />} />
+          <Route element={<MobileEmployeeLayout />}>
+            <Route path="employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="employee/profile" element={<MyProfile />} />
+            <Route path="employee/attendance" element={<MyAttendance />} />
+            <Route path="employee/roster" element={<Roster />} />
+            <Route path="employee/leave" element={<MyLeave />} />
+            <Route path="employee/leave/apply" element={<ApplyLeave />} />
+            <Route path="employee/calendar" element={<Placeholder title="Company Calendar" />} />
+            <Route path="employee/payslips" element={<MyPayslips />} />
+            <Route path="employee/documents" element={<MyDocuments />} />
+            <Route path="employee/requests" element={<Placeholder title="My Requests" />} />
+            <Route path="employee/directory" element={<EmployeeDirectory />} />
+            <Route path="employee/ai" element={<Placeholder title="AI Assistant" />} />
+            <Route path="employee/announcements" element={<Announcements />} />
+            <Route path="employee/settings" element={<MySettings />} />
+            <Route path="employee/more" element={<More />} />
+          </Route>
           
           {mapPlaceholderRoutes(appPlaceholders)}
         </Route>

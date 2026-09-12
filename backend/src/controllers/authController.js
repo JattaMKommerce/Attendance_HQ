@@ -3,16 +3,17 @@ const authService = require('../services/authService');
 class AuthController {
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const identifier = req.body.email || req.body.employee_id || req.body.identifier;
+      const { password } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'Email and password are required' });
+      if (!identifier || !password) {
+        return res.status(400).json({ success: false, message: 'Email/Employee ID and password are required' });
       }
 
       const ipAddress = req.ip || req.connection.remoteAddress;
       const userAgent = req.headers['user-agent'];
 
-      const result = await authService.login(email, password, ipAddress, userAgent);
+      const result = await authService.login(identifier, password, ipAddress, userAgent);
 
       res.status(200).json({
         success: true,
@@ -20,7 +21,7 @@ class AuthController {
         data: result
       });
     } catch (error) {
-      if (error.message === 'Invalid email or password' || error.message === 'User account is not active' || error.message.includes('suspended')) {
+      if (error.message.includes('Invalid') || error.message.includes('not active') || error.message.includes('suspended')) {
          return res.status(401).json({ success: false, message: error.message });
       }
       next(error);
@@ -105,6 +106,46 @@ class AuthController {
         return res.status(409).json({ success: false, message: error.message });
       }
       next(error);
+    }
+  }
+
+  async verifyActivationToken(req, res, next) {
+    try {
+      const token = req.query.token;
+      if (!token) {
+        return res.status(400).json({ success: false, message: 'Activation token is required' });
+      }
+
+      const result = await authService.verifyActivationToken(token);
+      res.status(200).json({
+        success: true,
+        message: 'Activation token is valid',
+        data: result
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async activateAccount(req, res, next) {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({ success: false, message: 'Token and permanent password are required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
+      }
+
+      const result = await authService.activateAccount(token, password);
+      res.status(200).json({
+        success: true,
+        message: 'Account activated successfully. You can now log in with your permanent password.',
+        data: result
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
     }
   }
 }
