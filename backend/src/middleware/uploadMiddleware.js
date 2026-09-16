@@ -20,32 +20,41 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  const allowedDocTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp'];
+  const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+  const allowedDocExts = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'];
+  const allowedDocMimes = [
+    'application/pdf', 
+    'image/jpeg', 
+    'image/png', 
+    'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
 
   if (file.fieldname === 'photo') {
-    if (allowedImageTypes.includes(file.mimetype)) {
+    if (allowedImageExts.includes(ext) && allowedImageMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Invalid photo format. Only JPG, PNG, WEBP allowed.'), false);
     }
   } else if (file.fieldname === 'document' || file.fieldname === 'resume') {
-    if (allowedDocTypes.includes(file.mimetype)) {
+    if (allowedDocExts.includes(ext) && allowedDocMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid document format. Only PDF, JPG, PNG allowed.'), false);
+      cb(new Error('Invalid document format. Only PDF, JPG, PNG, DOC, DOCX allowed.'), false);
     }
   } else {
-    cb(new Error('Unexpected field'), false);
+    cb(new Error('Unexpected upload field'), false);
   }
 };
 
 const upload = multer({ 
   storage: storage,
-  // Removed strict 5MB limit based on user request. 
-  // Using 50MB as a safety catch-all instead of infinity.
   limits: {
-    fileSize: 50 * 1024 * 1024
+    fileSize: parseInt(process.env.MAX_UPLOAD_SIZE_BYTES, 10) || (50 * 1024 * 1024),
+    files: 5
   },
   fileFilter: fileFilter
 });

@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { Users, Calendar, Clock, CheckCircle } from 'lucide-react';
+import AiCommandBar from '../../components/ai/AiCommandBar';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -16,6 +17,9 @@ const Dashboard = () => {
           <button className="btn btn-primary">Log Time</button>
         </div>
       </div>
+
+      {/* Prominent AI Command Bar */}
+      <AiCommandBar />
 
       <div style={styles.grid}>
         {/* Placeholder Stat Cards */}

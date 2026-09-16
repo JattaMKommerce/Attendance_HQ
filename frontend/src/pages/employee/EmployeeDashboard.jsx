@@ -6,6 +6,7 @@ import {
   Sparkles, Gift, ArrowRight
 } from 'lucide-react';
 import { EmployeeContext } from '../../context/EmployeeContext';
+import AiCommandBar from '../../components/ai/AiCommandBar';
 
 export default function EmployeeDashboard() {
   const { 
@@ -123,6 +124,11 @@ export default function EmployeeDashboard() {
           <span>{feedback.message}</span>
         </div>
       )}
+
+      {/* Prominent AI Command Bar */}
+      <div style={{ padding: '0 20px', marginBottom: '16px' }}>
+        <AiCommandBar />
+      </div>
 
       {/* Hero Attendance Card */}
       <div style={{ padding: '0 20px', marginBottom: '20px' }}>

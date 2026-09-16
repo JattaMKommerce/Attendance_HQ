@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-const getBaseUrl = () => {
+export const getApiBaseUrl = () => {
   // 1. Explicit environment variable takes highest precedence (Vite .env or build-time config)
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    const customUrl = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
   }
 
   // 2. Running in browser
@@ -26,12 +27,37 @@ const getBaseUrl = () => {
     }
   }
 
-  return 'http://localhost:5001/api';
+  return '/api';
 };
 
+export const getServerBaseUrl = () => {
+  const apiBase = getApiBaseUrl();
+  return apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
+};
+
+/**
+ * Returns a fully qualified or clean relative URL for static uploaded assets (photos, documents)
+ * Works consistently across dev, production SPA reverse proxy, and custom domains.
+ */
+export const getFileUrl = (filePath) => {
+  if (!filePath) return '';
+  if (
+    filePath.startsWith('blob:') || 
+    filePath.startsWith('data:') || 
+    filePath.startsWith('http://') || 
+    filePath.startsWith('https://')
+  ) {
+    return filePath;
+  }
+  const serverBase = getServerBaseUrl();
+  const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return serverBase ? `${serverBase}${normalizedPath}` : normalizedPath;
+};
+
+export const getBaseUrl = getApiBaseUrl;
 
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
   }

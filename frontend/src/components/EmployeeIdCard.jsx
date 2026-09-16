@@ -1,6 +1,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { State } from 'country-state-city';
+import { getIndiaStateName } from '../utils/indiaStates';
+import { getFileUrl } from '../services/api';
 import './EmployeeIdCard.css';
 
 const EmployeeIdCard = ({ employee }) => {
@@ -13,7 +14,7 @@ const EmployeeIdCard = ({ employee }) => {
   const qrData = `${window.location.origin}/app/employees/${employee.id}/id-card`;
   
   const locationString = employee.office_city && employee.office_state 
-    ? `${employee.office_city}, ${State.getStateByCodeAndCountry(employee.office_state, 'IN')?.name || employee.office_state}`
+    ? `${employee.office_city}, ${getIndiaStateName(employee.office_state) || employee.office_state}`
     : '-';
 
   return (
@@ -41,7 +42,7 @@ const EmployeeIdCard = ({ employee }) => {
         <div className="id-card-avatar-container">
           {employee.profile_image_url ? (
             <img 
-              src={`http://localhost:5001${employee.profile_image_url}`} 
+              src={getFileUrl(employee.profile_image_url)} 
               alt="Profile" 
               className="id-card-avatar"
             />

@@ -12,7 +12,7 @@ class AttendanceController {
     }
   }
 
-  async getRecords(req, res, next) { console.log("getRecords called!");
+  async getRecords(req, res, next) {
     try {
       const filters = {
         date: req.query.date,

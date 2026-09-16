@@ -15,7 +15,8 @@ import {
   Mail,
   Phone,
   Building,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { EmployeeContext } from '../../context/EmployeeContext';
@@ -33,6 +34,7 @@ export default function More() {
   };
 
   const menuItems = [
+    { label: 'AI Command Assistant', path: '/app/employee/ai', icon: Sparkles },
     { label: 'My Profile', path: '/app/employee/profile', icon: User },
     { label: 'Announcements & Notices', path: '/app/employee/announcements', icon: Megaphone },
     { label: 'My Documents', path: '/app/employee/documents', icon: Folder },

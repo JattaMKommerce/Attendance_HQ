@@ -11,6 +11,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
+import { getFileUrl } from '../../services/api';
 
 const EmployeeDirectory = () => {
   const [loading, setLoading] = useState(true);
@@ -209,7 +210,7 @@ const EmployeeDirectory = () => {
                   }}>
                     {emp.profile_image_url ? (
                       <img
-                        src={`http://${window.location.hostname}:5001${emp.profile_image_url}`}
+                        src={getFileUrl(emp.profile_image_url)}
                         alt={empName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => { e.target.style.display = 'none'; }}

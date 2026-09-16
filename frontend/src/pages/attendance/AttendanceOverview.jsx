@@ -99,12 +99,9 @@ const AttendanceOverview = () => {
 
   const loadLookups = async () => {
     try {
-      // Assuming employeeApi is available, we would use it, but since we just need it once, let's fetch raw if not imported
       const [shiftsRes, lookupsRes] = await Promise.all([
         attendanceApi.getShifts().catch(() => ({ data: { data: [] } })),
-        fetch('http://localhost:5001/api/employees/lookups', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-        }).then(res => res.json()).catch(() => ({ data: { departments: [] } }))
+        api.get('/employees/lookups').then(res => res.data).catch(() => ({ data: { departments: [] } }))
       ]);
       
       if (shiftsRes.data && shiftsRes.data.data) {

@@ -15,6 +15,7 @@ backend/uploads/**/*
 
 .DS_Store
 *.log
+*.zip
 backend/test-*.js
 backend/check-*.js
 backend/crash-test.js

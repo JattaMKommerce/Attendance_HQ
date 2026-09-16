@@ -1,13 +1,26 @@
-import React, { useContext, useState } from 'react';
-import { Menu, Bell, Search, LogOut, User, ScanLine } from 'lucide-react';
+import React, { useContext, useState, useEffect } from 'react';
+import { Menu, Bell, Search, LogOut, User, ScanLine, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { AuthContext } from '../../context/AuthContext';
+import AiCommandModal from '../ai/AiCommandModal';
 
 const Topbar = ({ toggleMobileSidebar }) => {
   const { user, logout } = useContext(AuthContext);
   const [showScanner, setShowScanner] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowAiModal(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (!user) return null;
 
@@ -39,10 +52,10 @@ const Topbar = ({ toggleMobileSidebar }) => {
           <Menu size={20} />
         </button>
         
-        {/* Placeholder Global Search Trigger */}
-        <div className="search-trigger" style={styles.searchTrigger}>
-          <Search size={16} color="var(--text-muted)" />
-          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Search...</span>
+        {/* Global AI Command Trigger */}
+        <div className="search-trigger" style={styles.searchTrigger} onClick={() => setShowAiModal(true)}>
+          <Sparkles size={16} color="var(--accent-hover)" />
+          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Ask AI Assistant...</span>
           <span style={styles.searchShortcut}>⌘K</span>
         </div>
       </div>
@@ -54,6 +67,15 @@ const Topbar = ({ toggleMobileSidebar }) => {
             {user.organization.name}
           </div>
         )}
+
+        <button 
+          className="icon-btn" 
+          title="AI Assistant (⌘K)" 
+          onClick={() => setShowAiModal(true)}
+          style={{ color: 'var(--accent-hover)', background: 'var(--bg-surface-hover)' }}
+        >
+          <Sparkles size={18} />
+        </button>
         
         <button className="icon-btn" title="Scan ID Card QR" onClick={() => setShowScanner(true)}>
           <ScanLine size={18} />
@@ -74,6 +96,9 @@ const Topbar = ({ toggleMobileSidebar }) => {
           </div>
         </div>
       </div>
+
+      {/* Global AI Command Palette Modal */}
+      <AiCommandModal isOpen={showAiModal} onClose={() => setShowAiModal(false)} />
 
       {showScanner && (
         <div style={styles.modalOverlay} onClick={() => setShowScanner(false)}>

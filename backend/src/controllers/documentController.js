@@ -5,11 +5,19 @@ const fs = require('fs');
 exports.downloadDocument = async (req, res) => {
   try {
     const documentId = req.params.id;
-    const organizationId = req.user.organizationId;
-    const userId = req.user.id;
-    const userRole = req.user.role; // Assume 1: Admin, 2: HR, 3: Manager, 4: Employee
+    const organizationId = req.user?.organization_id || req.user?.organizationId;
+    const userId = req.user?.id;
 
-    // Find the document
+    if (!organizationId) {
+      return res.status(401).json({ success: false, message: 'Organization context missing' });
+    }
+
+    // Safely normalize user roles array
+    const userRoles = Array.isArray(req.user?.roles) 
+      ? req.user.roles 
+      : (req.user?.role ? [req.user.role] : []);
+
+    // Find the document within the tenant boundary
     const [docs] = await db.query(
       `SELECT d.*, e.user_id as employee_user_id 
        FROM documents d
@@ -28,21 +36,26 @@ exports.downloadDocument = async (req, res) => {
     let isAuthorized = false;
     
     // 1. HR or Admin can view all documents in their organization
-    if (userRole === 1 || userRole === 2) {
+    const isAdminOrHr = userRoles.some(r => 
+      ['ORG_ADMIN', 'HR_ADMIN', 'ADMIN', 'SUPER_ADMIN', 1, 2, '1', '2'].includes(r)
+    );
+    if (isAdminOrHr) {
       isAuthorized = true;
     } 
     // 2. The employee who owns the document can view it
-    else if (doc.employee_user_id === userId) {
+    else if (doc.employee_user_id && doc.employee_user_id === userId) {
+      isAuthorized = true;
+    } else if (req.user?.employee_id && doc.employee_id === req.user.employee_id) {
       isAuthorized = true;
     }
     
-    // Additional check if there's explicit access in document_access table
+    // 3. Check explicit access grants in document_access table
     if (!isAuthorized) {
       const [access] = await db.query(
-        `SELECT can_view FROM document_access da
+        `SELECT da.can_view FROM document_access da
          LEFT JOIN employees e ON da.employee_id = e.id
-         WHERE da.document_id = ? AND e.user_id = ?`,
-        [documentId, userId]
+         WHERE da.document_id = ? AND (e.user_id = ? OR da.employee_id = ?)`,
+        [documentId, userId, req.user?.employee_id || 0]
       );
       if (access.length > 0 && access[0].can_view) {
         isAuthorized = true;
@@ -53,8 +66,14 @@ exports.downloadDocument = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized to view this document' });
     }
 
-    // Serve the file
-    const filePath = path.join(__dirname, '../..', doc.file_url);
+    // Prevent directory traversal attacks
+    const uploadsRoot = path.resolve(__dirname, '../../uploads');
+    const safeRelativePath = (doc.file_url || '').replace(/^\/+/, '');
+    const filePath = path.resolve(__dirname, '../..', safeRelativePath);
+
+    if (!filePath.startsWith(uploadsRoot)) {
+      return res.status(403).json({ success: false, message: 'Invalid document file path' });
+    }
     
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ success: false, message: 'File not found on server' });

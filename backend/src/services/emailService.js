@@ -206,10 +206,8 @@ If you have any questions, please reach out to your HR department.
 
     const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent.trim())}`;
 
-    // Always log the outgoing invitation attempt for audit trail
-    console.log(`[EmailService] Attempting to send onboarding invitation to ${toEmail} (${employeeCode})`);
-    console.log(`[EmailService] Activation Link: ${activationLink}`);
-    console.log(`[EmailService] Gmail Compose URL: ${gmailComposeUrl}`);
+    // Always log the outgoing invitation attempt for audit trail with tokens redacted
+    console.log(`[EmailService] Attempting to send onboarding invitation to ${toEmail} (${employeeCode}) [activation token redacted]`);
 
     const transporter = this.getTransporter();
     if (!transporter) {

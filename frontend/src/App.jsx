@@ -67,6 +67,7 @@ import FinalSettlement from './pages/lifecycle/FinalSettlement';
 
 // Placeholders
 import Placeholder from './pages/placeholders/Placeholder';
+import AiAssistantPage from './pages/ai/AiAssistantPage';
 
 const Unauthorized = () => (
   <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -86,7 +87,6 @@ const appPlaceholders = [
   { path: 'incentives', title: 'Incentives' },
   { path: 'expenses', title: 'Expenses' },
   { path: 'documents', title: 'Documents' },
-  { path: 'ai', title: 'AI Assistant' },
   { path: 'automation', title: 'Automation' },
   { path: 'reports', title: 'Reports' },
   { path: 'settings', title: 'Settings' }
@@ -169,6 +169,7 @@ const AppRoutes = () => {
           <Route path="performance" element={<Performance />} />
           <Route path="assets" element={<Assets />} />
           <Route path="offboarding" element={<Offboarding />} />
+          <Route path="ai" element={<AiAssistantPage />} />
           
           {/* Employee Lifecycle */}
           <Route path="lifecycle/probation" element={<Probation />} />
@@ -191,7 +192,7 @@ const AppRoutes = () => {
             <Route path="employee/documents" element={<MyDocuments />} />
             <Route path="employee/requests" element={<Placeholder title="My Requests" />} />
             <Route path="employee/directory" element={<EmployeeDirectory />} />
-            <Route path="employee/ai" element={<Placeholder title="AI Assistant" />} />
+            <Route path="employee/ai" element={<AiAssistantPage />} />
             <Route path="employee/announcements" element={<Announcements />} />
             <Route path="employee/settings" element={<MySettings />} />
             <Route path="employee/more" element={<More />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, IndianRupee, Building2, CheckCircle, Send, RefreshCw, Copy, Check, Mail, ExternalLink, AlertTriangle } from 'lucide-react';
 import { createEmployee, getLookups, uploadPhoto, uploadDocument, uploadResume, resendInvitation } from '../../services/employeeApi';
-import { State, City } from 'country-state-city';
+import { getIndiaStatesList, getCitiesForIndiaState } from '../../utils/geoService';
 import FileUploader from '../../components/common/FileUploader';
 import '../../styles/components.css';
 
@@ -72,6 +72,15 @@ const AddEmployee = () => {
   };
 
   const [formData, setFormData] = useState(defaultFormData);
+  const [cities, setCities] = useState([]);
+
+  useEffect(() => {
+    if (formData.office_state) {
+      getCitiesForIndiaState(formData.office_state).then(setCities);
+    } else {
+      setCities([]);
+    }
+  }, [formData.office_state]);
 
   const [photoPreview, setPhotoPreview] = useState(null);
   const [resumeName, setResumeName] = useState(null);
@@ -777,14 +786,14 @@ const AddEmployee = () => {
                 setFormData(prev => ({ ...prev, office_state: e.target.value, office_city: '' }));
               }}>
                 <option value="">Select State</option>
-                {State.getStatesOfCountry('IN').map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
+                {getIndiaStatesList().map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
               </select>
             </div>
             <div className="input-group">
               <label className="input-label">City</label>
               <select name="office_city" className="input-control" value={formData.office_city} onChange={handleChange} disabled={!formData.office_state}>
                 <option value="">Select City</option>
-                {formData.office_state && City.getCitiesOfState('IN', formData.office_state).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                {cities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
               </select>
             </div>
           </div>

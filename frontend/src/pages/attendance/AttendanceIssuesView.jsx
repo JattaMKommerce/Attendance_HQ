@@ -4,6 +4,7 @@ import {
   Users, CheckSquare, AlertCircle, Calendar, Clock, X, FileText
 } from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
+import api from '../../services/api';
 
 // Helper to get a default date range: current month
 function getDefaultDateRange() {
@@ -53,23 +54,16 @@ export default function AttendanceIssuesView({ activeTab, onBack }) {
 
   // ─── Load lookups (departments + employees) ────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    fetch('http://localhost:5001/api/employees/lookups', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.json())
+    api.get('/employees/lookups')
       .then(res => {
-        if (res.data?.departments) setDepartments(res.data.departments);
+        if (res.data?.data?.departments) setDepartments(res.data.data.departments);
       })
       .catch(() => {});
 
     // Also load employees for dropdown
-    fetch('http://localhost:5001/api/employees?status=active&limit=500', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.json())
+    api.get('/employees?status=active&limit=500')
       .then(res => {
-        const list = Array.isArray(res.data) ? res.data : (res.data?.employees || []);
+        const list = Array.isArray(res.data?.data) ? res.data.data : (res.data?.data?.employees || []);
         setEmployees(list);
       })
       .catch(() => {});

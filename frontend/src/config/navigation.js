@@ -44,6 +44,7 @@ export const employeeNavigation = [
     group: 'My Workspace',
     items: [
       { label: 'Dashboard',        path: '/app/employee/dashboard',    icon: LayoutDashboard, roles: ['EMPLOYEE'] },
+      { label: 'AI Assistant',     path: '/app/employee/ai',           icon: Bot,             roles: ['EMPLOYEE'] },
       { label: 'My Attendance',    path: '/app/employee/attendance',   icon: Clock,           roles: ['EMPLOYEE'] },
       { label: 'My Leave',         path: '/app/employee/leave',        icon: Umbrella,        roles: ['EMPLOYEE'] },
       { label: 'My Payslips',      path: '/app/employee/payslips',     icon: DollarSign,      roles: ['EMPLOYEE'] },
@@ -68,9 +69,10 @@ export const organizationNavigation = [
   {
     group: 'Workspace',
     items: [
-      { label: 'Dashboard',  path: '/app/dashboard',   icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'Onboarding', path: '/app/employees',   icon: Users,           roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
-      { label: 'Attendance', path: '/app/attendance',  icon: Calendar,        roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Dashboard',    path: '/app/dashboard',   icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'AI Assistant', path: '/app/ai',          icon: Bot,             roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Onboarding',   path: '/app/employees',   icon: Users,           roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { label: 'Attendance',   path: '/app/attendance',  icon: Calendar,        roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
     ]
   },
   {

@@ -22,6 +22,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
+import { getFileUrl } from '../../services/api';
 
 const MyProfile = () => {
   const { user } = useContext(AuthContext);
@@ -207,7 +208,7 @@ const MyProfile = () => {
             }}>
               {profile.profile_image_url ? (
                 <img
-                  src={`http://${window.location.hostname}:5001${profile.profile_image_url}`}
+                  src={getFileUrl(profile.profile_image_url)}
                   alt={fullName}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => { e.target.style.display = 'none'; }}

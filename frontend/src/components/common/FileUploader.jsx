@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, File } from 'lucide-react';
+import { getFileUrl } from '../../services/api';
 import '../../styles/components.css';
 
 const FileUploader = ({ 
@@ -58,12 +59,12 @@ const FileUploader = ({
           backgroundColor: 'var(--surface-hover)'
         }}>
           {isImage ? (
-            <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} />
+            <img src={getFileUrl(previewUrl)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} />
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <File size={24} color="var(--primary-color)" />
               {previewUrl ? (
-                <a href={previewUrl.startsWith('blob:') ? previewUrl : `http://localhost:5001${previewUrl}`} target="_blank" rel="noreferrer" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--primary-color)', textDecoration: 'underline' }}>
+                <a href={getFileUrl(previewUrl)} target="_blank" rel="noreferrer" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--primary-color)', textDecoration: 'underline' }}>
                   {fileName || 'Document.pdf'}
                 </a>
               ) : (

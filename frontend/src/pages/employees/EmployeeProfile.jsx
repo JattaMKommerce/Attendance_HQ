@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Send, CheckCircle, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
 import { getEmployeeById, updateEmployee, getLookups, resendInvitation } from '../../services/employeeApi';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
-import { State, City } from 'country-state-city';
+import { getFileUrl } from '../../services/api';
+import { getIndiaStatesList, getCitiesForIndiaState, getIndiaStateName } from '../../utils/geoService';
 import '../../styles/components.css';
 
 const EmployeeProfile = () => {
@@ -23,6 +24,15 @@ const EmployeeProfile = () => {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [showIdModal, setShowIdModal] = useState(false);
+  const [cities, setCities] = useState([]);
+
+  useEffect(() => {
+    if (formData.office_state) {
+      getCitiesForIndiaState(formData.office_state).then(setCities);
+    } else {
+      setCities([]);
+    }
+  }, [formData.office_state]);
 
   const fetchEmployee = async () => {
     try {
@@ -260,7 +270,7 @@ const EmployeeProfile = () => {
       {/* Profile Header */}
       <div className="card" style={{ padding: '24px', marginBottom: '24px', display: 'flex', gap: '24px', alignItems: 'center' }}>
          {employee.profile_image_url ? (
-            <img src={`http://localhost:5001${employee.profile_image_url}`} alt="Profile" className="profile-avatar-large" />
+            <img src={getFileUrl(employee.profile_image_url)} alt="Profile" className="profile-avatar-large" />
          ) : (
             <div className="profile-avatar-placeholder">
                {employee.first_name[0]}{employee.last_name[0]}
@@ -281,7 +291,7 @@ const EmployeeProfile = () => {
             
             <div className="profile-meta-grid">
                <div className="profile-meta-item"><Briefcase size={16} /> {employee.department_name || 'No Department'}</div>
-               <div className="profile-meta-item"><MapPin size={16} /> {employee.office_city && employee.office_state ? `${employee.office_city}, ${State.getStateByCodeAndCountry(employee.office_state, 'IN')?.name || employee.office_state}` : 'Not set'}</div>
+               <div className="profile-meta-item"><MapPin size={16} /> {employee.office_city && employee.office_state ? `${employee.office_city}, ${getIndiaStateName(employee.office_state) || employee.office_state}` : 'Not set'}</div>
                <div className="profile-meta-item"><CalendarIcon size={16} /> Joined {joinDate}</div>
                <div className="profile-meta-item"><Mail size={16} /> {employee.email}</div>
                <div className="profile-meta-item"><Phone size={16} /> {employee.phone || '+91 -'}</div>
@@ -362,16 +372,16 @@ const EmployeeProfile = () => {
                          <select name="office_state" className="input-control" value={formData.office_state || ''} onChange={(e) => {
                            setFormData(prev => ({ ...prev, office_state: e.target.value, office_city: '' }));
                          }} disabled={!editMode}>
-                           <option value="">Select State</option>
-                           {State.getStatesOfCountry('IN').map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
-                         </select>
-                       </div>
-                       <div className="input-group">
-                         <label className="input-label">City</label>
-                         <select name="office_city" className="input-control" value={formData.office_city || ''} onChange={handleChange} disabled={!editMode || !formData.office_state}>
-                           <option value="">Select City</option>
-                           {formData.office_state && City.getCitiesOfState('IN', formData.office_state).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                         </select>
+                            <option value="">Select State</option>
+                            {getIndiaStatesList().map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="input-group">
+                          <label className="input-label">City</label>
+                          <select name="office_city" className="input-control" value={formData.office_city || ''} onChange={handleChange} disabled={!editMode || !formData.office_state}>
+                            <option value="">Select City</option>
+                            {cities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                          </select>
                        </div>
                      </div>
                    </div>
