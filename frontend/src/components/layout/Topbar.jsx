@@ -122,29 +122,34 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    backgroundColor: 'var(--bg-surface-hover)',
-    padding: '6px 12px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--border)',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    padding: '7px 14px',
+    borderRadius: '12px',
+    border: '1.5px solid rgba(255, 255, 255, 0.85)',
     cursor: 'pointer',
-    width: '240px',
+    width: '250px',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
   },
   searchShortcut: {
     marginLeft: 'auto',
-    fontSize: '12px',
-    color: 'var(--text-muted)',
-    backgroundColor: 'var(--bg-surface)',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    border: '1px solid var(--border)'
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#64748b',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    padding: '2px 7px',
+    borderRadius: '6px',
+    border: '1px solid rgba(226, 232, 240, 0.8)'
   },
   orgBadge: {
     fontSize: '12px',
-    fontWeight: '500',
-    padding: '4px 8px',
-    backgroundColor: 'var(--accent-soft)',
-    color: 'var(--accent-hover)',
-    borderRadius: 'var(--radius-sm)'
+    fontWeight: '600',
+    padding: '4px 12px',
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    color: '#2563eb',
+    border: '1px solid rgba(37, 99, 235, 0.18)',
+    borderRadius: '20px'
   },
   profileMenu: {
     display: 'flex',
@@ -152,34 +157,40 @@ const styles = {
     gap: '8px'
   },
   avatar: {
-    width: '32px',
-    height: '32px',
+    width: '34px',
+    height: '34px',
     borderRadius: '50%',
-    backgroundColor: 'var(--accent)',
-    color: '#fff',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer'
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.22)'
   },
   profileDropdown: {
     display: 'flex'
   },
   modalOverlay: {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     zIndex: 9999
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1.5px solid rgba(255, 255, 255, 0.85)',
     padding: '24px',
-    borderRadius: '12px',
+    borderRadius: '20px',
     width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+    maxWidth: '420px',
+    boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)'
   }
 };
 

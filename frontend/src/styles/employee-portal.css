@@ -68,9 +68,9 @@
 
 .ep-tab:hover { color: var(--text-primary); }
 .ep-tab.active {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent-hover);
-  font-weight: 600;
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+  font-weight: 700;
 }
 
 /* ── Status badges ───────────────────────────────────────────────────────── */
@@ -101,18 +101,22 @@
 
 .ep-stat-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-xl);
+  padding: 20px 22px;
   display: flex;
   align-items: flex-start;
   gap: 16px;
   cursor: default;
+  box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.95);
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .ep-stat-card.clickable { cursor: pointer; }
 .ep-stat-card.clickable:hover {
-  box-shadow: var(--shadow-md);
+  background: var(--bg-surface-hover);
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.10), inset 0 1px 2px rgba(255, 255, 255, 0.95);
   transform: translateY(-2px);
 }
 
@@ -359,14 +363,20 @@
 
 /* ── Request card ────────────────────────────────────────────────────────── */
 .ep-request-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-xl);
+  padding: 18px 22px;
   margin-bottom: 12px;
   background: var(--bg-surface);
-  transition: box-shadow 0.15s;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.ep-request-card:hover { box-shadow: var(--shadow-sm); }
+.ep-request-card:hover {
+  box-shadow: 0 15px 35px -8px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
 
 /* ── AI assistant ────────────────────────────────────────────────────────── */
 .ep-ai-bubble {

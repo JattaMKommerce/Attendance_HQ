@@ -26,7 +26,7 @@ const Dashboard = () => {
         <div className="card layer-3d">
           <div className="card-body" style={styles.statCard}>
             <div style={styles.statIconWrapper}>
-              <Users size={20} color="var(--accent-hover)" />
+              <Users size={20} color="#2563eb" />
             </div>
             <div>
               <p style={styles.statLabel}>Total Employees</p>
@@ -114,11 +114,15 @@ const styles = {
   statIconWrapper: {
     width: '48px',
     height: '48px',
-    borderRadius: 'var(--radius-md)',
-    backgroundColor: 'var(--bg-surface-hover)',
+    borderRadius: '14px',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    border: '1.5px solid rgba(255, 255, 255, 0.90)',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
   },
   statLabel: {
     margin: '0 0 4px 0',
