@@ -21,7 +21,13 @@ class AuthController {
         data: result
       });
     } catch (error) {
-      if (error.message.includes('Invalid') || error.message.includes('not active') || error.message.includes('suspended')) {
+      if (
+        error.message.includes('Invalid') || 
+        error.message.includes('not active') || 
+        error.message.includes('suspended') || 
+        error.message.includes('activated') ||
+        error.message.includes('required')
+      ) {
          return res.status(401).json({ success: false, message: error.message });
       }
       next(error);

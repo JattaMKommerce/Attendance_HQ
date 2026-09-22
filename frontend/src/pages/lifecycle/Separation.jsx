@@ -195,7 +195,6 @@ export default function Separation() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LogOut size={24} color="#f97316" /> Separation Management
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage resignations, terminations and offboarding process</p>
         </div>
         <button 
           type="button"

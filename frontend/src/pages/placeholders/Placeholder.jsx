@@ -7,7 +7,6 @@ const Placeholder = ({ title }) => {
       <div className="page-header">
         <div>
           <h1 className="page-title">{title}</h1>
-          <p className="page-description">This module is part of the UI foundation but business logic is deferred to a later phase.</p>
         </div>
       </div>
       

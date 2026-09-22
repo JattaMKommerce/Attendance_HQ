@@ -1,15 +1,27 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+
+// Ensure upload directories exist
+const uploadBase = path.resolve(__dirname, '../uploads');
+['photos', 'documents', 'social'].forEach(subDir => {
+  const dirPath = path.join(uploadBase, subDir);
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+});
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (file.fieldname === 'photo') {
-      cb(null, 'uploads/photos/');
+      cb(null, path.join(uploadBase, 'photos'));
     } else if (file.fieldname === 'document' || file.fieldname === 'resume') {
-      cb(null, 'uploads/documents/');
+      cb(null, path.join(uploadBase, 'documents'));
+    } else if (file.fieldname === 'media') {
+      cb(null, path.join(uploadBase, 'social'));
     } else {
-      cb(null, 'uploads/');
+      cb(null, uploadBase);
     }
   },
   filename: function (req, file, cb) {
@@ -21,8 +33,8 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp'];
-  const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'];
+  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+  const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
   const allowedDocExts = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'];
   const allowedDocMimes = [
@@ -34,7 +46,7 @@ const fileFilter = (req, file, cb) => {
   ];
 
   if (file.fieldname === 'photo') {
-    if (allowedImageExts.includes(ext) && allowedImageMimes.includes(file.mimetype)) {
+    if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Invalid photo format. Only JPG, PNG, WEBP allowed.'), false);
@@ -45,8 +57,14 @@ const fileFilter = (req, file, cb) => {
     } else {
       cb(new Error('Invalid document format. Only PDF, JPG, PNG, DOC, DOCX allowed.'), false);
     }
+  } else if (file.fieldname === 'media') {
+    if (allowedImageExts.includes(ext) && allowedImageMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid media format. Only JPG, JPEG, PNG, WEBP, and GIF images are allowed.'), false);
+    }
   } else {
-    cb(new Error('Unexpected upload field'), false);
+    cb(new Error('Unexpected upload field: ' + file.fieldname), false);
   }
 };
 
@@ -59,4 +77,17 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+const uploadSocial = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per image
+    files: 5
+  },
+  fileFilter: fileFilter
+});
+
+upload.social = uploadSocial;
+upload.uploadSocial = uploadSocial;
+
 module.exports = upload;
+

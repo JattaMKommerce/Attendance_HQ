@@ -93,8 +93,8 @@ export default function OfficialPayslipModal({ employee, onClose, onPrint }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #1e293b', paddingBottom: '24px', marginBottom: '32px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{ width: '40px', height: '40px', background: '#2563eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '20px' }}>A</div>
-                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>ACME CORP</h2>
+                <div style={{ width: '40px', height: '40px', background: '#0f172a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '20px' }}>J</div>
+                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>JMK</h2>
               </div>
               <p style={{ margin: '0 0 4px 0', color: '#475569', fontSize: '12px' }}>123 Corporate Blvd, Tech District</p>
               <p style={{ margin: 0, color: '#475569', fontSize: '12px' }}>San Francisco, CA 94107, United States</p>
@@ -172,7 +172,7 @@ export default function OfficialPayslipModal({ employee, onClose, onPrint }) {
             
             <div style={{ width: '180px', textAlign: 'center', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '22px' }}>
               <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>Authorized Signatory</div>
-              <div style={{ fontSize: '10px', color: '#94a3b8' }}>Acme Corp HR Dept</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8' }}>JMK HR Dept</div>
             </div>
           </div>
 

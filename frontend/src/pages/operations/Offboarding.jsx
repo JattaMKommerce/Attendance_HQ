@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   UserX, Plus, Search, X, CheckCircle, CheckCircle2,
   Circle, Clock, AlertCircle, ChevronRight, ChevronLeft,
-  FileText, Shield, Package, DollarSign, Mail, Briefcase,
+  FileText, Shield, Package, IndianRupee, Mail, Briefcase,
   Award, Users, Calendar, Trash2, RotateCcw
 } from 'lucide-react';
 
@@ -14,8 +14,8 @@ const CHECKLIST_TEMPLATE = [
   { id: 'assets',        icon: Package,    label: 'Company Assets Returned',            description: 'Laptop, mobile, access cards and all assigned assets returned.', category: 'Assets' },
   { id: 'access',        icon: Shield,     label: 'System Access Revoked',              description: 'Email, Slack, JIRA, GitHub and all system accounts deactivated.', category: 'IT & Security' },
   { id: 'email',         icon: Mail,       label: 'Official Email Deactivated',         description: 'Corporate email account disabled and auto-reply set.', category: 'IT & Security' },
-  { id: 'payroll',       icon: DollarSign, label: 'Final Payroll Processed',            description: 'Full and final settlement including LOP, notice pay, and pending leaves.', category: 'Finance' },
-  { id: 'pf',            icon: DollarSign, label: 'PF / Gratuity Settlement',           description: 'Provident Fund transfer and gratuity payment processed if applicable.', category: 'Finance' },
+  { id: 'payroll',       icon: IndianRupee, label: 'Final Payroll Processed',            description: 'Full and final settlement including LOP, notice pay, and pending leaves.', category: 'Finance' },
+  { id: 'pf',            icon: IndianRupee, label: 'PF / Gratuity Settlement',           description: 'Provident Fund transfer and gratuity payment processed if applicable.', category: 'Finance' },
   { id: 'relieving',     icon: Award,      label: 'Relieving / Experience Letter Issued', description: 'Official relieving letter and experience certificate issued.', category: 'Documentation' },
   { id: 'noc',           icon: FileText,   label: 'NOC / Clearance Certificate Issued', description: 'No-objection certificate from all departments collected and issued.', category: 'Documentation' },
 ];

@@ -146,14 +146,14 @@ class AttendanceService {
       
       // Strict late logic for table
       if (currentStatus === 'present' || currentStatus === 'half_day') {
-        if (r.check_in_time) {
-          const checkInStr = typeof r.check_in_time === 'string' 
-            ? r.check_in_time 
-            : (r.check_in_time instanceof Date ? r.check_in_time.toTimeString() : String(r.check_in_time));
-          const timeParts = checkInStr.split(':');
-          if (timeParts.length >= 2) {
-            const hours = parseInt(timeParts[0], 10);
-            const minutes = parseInt(timeParts[1], 10);
+        if (r.late_minutes && Number(r.late_minutes) > 0) {
+          currentStatus = 'late';
+        } else if (r.check_in_time) {
+          const dt = new Date(r.check_in_time);
+          if (!isNaN(dt.getTime())) {
+            const hours = dt.getUTCHours();
+            const minutes = dt.getUTCMinutes();
+            // If check in is after 09:35 AM UTC/local
             if (hours > 9 || (hours === 9 && minutes > 35)) {
               currentStatus = 'late';
             }

@@ -67,23 +67,38 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Test DB connection before starting the server
-db.getConnection()
-  .then(connection => {
-    console.log('Database connected successfully');
-    connection.release();
-    
-    server = app.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+const fs = require('fs');
+
+function logStartup(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  console.log(line);
+  try {
+    const logPath = path.resolve(__dirname, '../startup.log');
+    fs.appendFileSync(logPath, `${line}\n`);
+  } catch (e) {}
+}
+
+// Bind and start listening immediately so Phusion Passenger detects the process
+server = app.listen(PORT, () => {
+  logStartup(`Server running in ${process.env.NODE_ENV || 'production'} mode on port ${PORT}`);
+  logStartup(`Runtime: Node ${process.version} (${process.platform} ${process.arch}), PID: ${process.pid}`);
+
+  // Test DB connection asynchronously in background
+  db.getConnection()
+    .then(connection => {
+      logStartup('Database connected successfully');
+      connection.release();
 
       // Start proactive HR intelligence insight scheduler
       if (process.env.NODE_ENV !== 'test') {
         insightScheduler.startScheduler();
       }
+    })
+    .catch(err => {
+      logStartup(`[Server DB Warning] Database connection failed: ${err.message} (Code: ${err.code || 'N/A'}, Errno: ${err.errno || 'N/A'})`);
+      // DO NOT call process.exit(1). Keep the process alive so Passenger remains running
+      // and /api/health can report the exact diagnosis over HTTP.
     });
-  })
-  .catch(err => {
-    console.error('Database connection failed:', err.message);
-    process.exit(1);
-  });
+});
+
 

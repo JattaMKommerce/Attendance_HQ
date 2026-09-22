@@ -165,7 +165,6 @@ export default function EmployeeRelations() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertTriangle size={24} color="#ef4444" /> Employee Relations
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage disciplinary cases, warnings and policy violations</p>
         </div>
         <button 
           type="button"

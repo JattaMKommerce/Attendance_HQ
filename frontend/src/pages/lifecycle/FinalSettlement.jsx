@@ -193,7 +193,6 @@ export default function FinalSettlement() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Banknote size={24} color="#059669" /> Full & Final Settlement
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage final settlement, dues and payouts for separated employees</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 

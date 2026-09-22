@@ -52,6 +52,7 @@ const AddEmployee = () => {
   const [resendFeedback, setResendFeedback] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
   const [copiedDownload, setCopiedDownload] = useState(false);
 
   const defaultSalary = { gross_salary: '', basic_salary: '', hra: '', special_allowance: '', deductions: '', esi_percentage: '0.75', pf_percentage: '12.00', monthly_paid_leaves: '2', other_allowance: '', professional_tax: '', advances: '', incentives: '' };
@@ -59,8 +60,9 @@ const AddEmployee = () => {
 
   const defaultFormData = {
     first_name: '', last_name: '', email: '', phone: '',
+    temporary_password: '',
     employee_code: '', joining_date: new Date().toISOString().split('T')[0],
-    gender: '', blood_group: '', employment_type: 'full_time', date_of_birth: '',
+    gender: '', marital_status: '', blood_group: '', employment_type: 'full_time', date_of_birth: '',
     department_id: '', designation_id: '', manager_id: '',
     current_address: '', permanent_address: '',
     emergency_contact_name: '', emergency_contact_phone: '',
@@ -265,6 +267,13 @@ const AddEmployee = () => {
     setTimeout(() => setCopiedToken(false), 3000);
   };
 
+  const copyPassword = () => {
+    if (!createdSuccess?.temporary_password) return;
+    navigator.clipboard.writeText(createdSuccess.temporary_password);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 3000);
+  };
+
   const copyDownloadLink = () => {
     if (!createdSuccess?.app_download_url) return;
     navigator.clipboard.writeText(createdSuccess.app_download_url);
@@ -286,7 +295,6 @@ const AddEmployee = () => {
           <button className="icon-btn" onClick={() => navigate('/app/employees')}><ArrowLeft size={20} /></button>
           <div>
             <h1 className="page-title">Add New Employee</h1>
-            <p className="page-description">Complete all sections to create an employee record.</p>
           </div>
         </div>
       </div>
@@ -489,8 +497,8 @@ const AddEmployee = () => {
             </div>
           )}
 
-          {/* Token & App Download Box */}
-          {(createdSuccess.token || createdSuccess.app_download_url) && (
+          {/* Token, Password & App Download Box */}
+          {(createdSuccess.temporary_password || createdSuccess.token || createdSuccess.app_download_url) && (
             <div style={{
               maxWidth: '680px',
               margin: '0 auto 28px',
@@ -499,6 +507,52 @@ const AddEmployee = () => {
               gap: '16px',
               textAlign: 'left'
             }}>
+              {/* Temporary Password Card */}
+              {createdSuccess.temporary_password && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#fffbeb',
+                  borderRadius: '10px',
+                  border: '1.5px solid #fcd34d',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#92400e' }}>
+                      🔐 Temporary Login Password:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyPassword}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        color: '#b45309',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {copiedPassword ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
+                      {copiedPassword ? 'Copied!' : 'Copy Password'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value={createdSuccess.temporary_password}
+                    className="input-control"
+                    style={{ fontSize: '13px', backgroundColor: '#ffffff', color: '#92400e', fontWeight: 700, fontFamily: 'monospace' }}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <span style={{ fontSize: '11px', color: '#b45309', marginTop: '6px', display: 'block' }}>
+                    Included in employee onboarding email. Employee should change this after first login.
+                  </span>
+                </div>
+              )}
+
               {/* Token Card */}
               {createdSuccess.token && (
                 <div style={{
@@ -696,10 +750,33 @@ const AddEmployee = () => {
             <div className="input-group"><label className="input-label">Last Name *</label><input type="text" name="last_name" className="input-control" value={formData.last_name} onChange={handleChange} required /></div>
             <div className="input-group"><label className="input-label">Email *</label><input type="email" name="email" className="input-control" value={formData.email} onChange={handleChange} required /></div>
             <div className="input-group"><label className="input-label">Phone</label><input type="text" name="phone" className="input-control" value={formData.phone} onChange={handleChange} /></div>
+            <div className="input-group">
+              <label className="input-label">
+                Initial Temporary Password <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional - leave blank to auto-generate)</span>
+              </label>
+              <input
+                type="text"
+                name="temporary_password"
+                className="input-control"
+                value={formData.temporary_password || ''}
+                onChange={handleChange}
+                placeholder="Leave blank to auto-generate secure password"
+              />
+            </div>
             <div className="input-group"><label className="input-label">Date of Birth</label><input type="date" name="date_of_birth" className="input-control" value={formData.date_of_birth} onChange={handleChange} /></div>
             <div className="input-group"><label className="input-label">Gender</label>
               <select name="gender" className="input-control" value={formData.gender} onChange={handleChange}>
                 <option value="">Select Gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+            <div className="input-group"><label className="input-label">Marital Status</label>
+              <select name="marital_status" className="input-control" value={formData.marital_status} onChange={handleChange}>
+                <option value="">Select Marital Status</option>
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+                <option value="unmarried">Unmarried</option>
+                <option value="divorced">Divorced</option>
+                <option value="widowed">Widowed</option>
               </select>
             </div>
             <div className="input-group"><label className="input-label">Blood Group</label>

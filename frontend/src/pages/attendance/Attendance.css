@@ -618,3 +618,53 @@
   background: transparent;
   cursor: pointer;
 }
+
+/* ── Mobile Responsiveness ───────────────────────────────────── */
+@media (max-width: 1024px) {
+  .att-kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .attendance-dashboard {
+    padding: 14px 10px 36px;
+    gap: 16px;
+  }
+
+  .att-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .att-header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .att-date-picker, .att-export-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .att-kpi-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .att-kpi-card {
+    padding: 14px;
+  }
+
+  .att-table-panel {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .att-table {
+    min-width: 600px;
+  }
+}

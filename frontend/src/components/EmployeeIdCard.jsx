@@ -33,7 +33,7 @@ const EmployeeIdCard = ({ employee }) => {
             </svg>
           </div>
           <div className="id-card-company">
-            <h2 className="company-name">Acme Corp</h2>
+            <h2 className="company-name">JMK</h2>
             <p className="company-tagline">People | Progress | Together</p>
           </div>
         </div>

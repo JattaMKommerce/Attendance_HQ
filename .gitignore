@@ -28,3 +28,18 @@ backend/get-*.js
 .idea/
 
 .gemini/
+
+# Native Mobile Signing & Secrets (Zero Credentials in Git)
+*.jks
+*.keystore
+*.p12
+*.cer
+*.crt
+*.key
+*.mobileprovision
+*.signing
+google-services.json
+GoogleService-Info.plist
+frontend/android/app/release/
+scratch/
+

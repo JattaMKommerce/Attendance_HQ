@@ -1,11 +1,14 @@
+const path = require('path');
 const mysql = require('mysql2/promise');
+require('dotenv').config({ path: path.resolve(__dirname, '../backend/.env') });
+require('dotenv').config();
 
 const config = {
   host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root',
+  password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'hrms_saas',
-  port: process.env.DB_PORT || 3307,
+  port: parseInt(process.env.DB_PORT, 10) || 3306,
 };
 
 const maxRetries = 30;

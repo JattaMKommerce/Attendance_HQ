@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import LeaveOverview from './LeaveOverview';
 import LeaveRequests from './LeaveRequests';
 import LeaveCalendar from './LeaveCalendar';
@@ -9,13 +10,23 @@ import { LayoutDashboard, Inbox, Calendar, Scale, Settings } from 'lucide-react'
 import './Leave.css';
 
 const Leave = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const requestedTab = searchParams.get('tab') || location.state?.tab || 'overview';
+  const [activeTab, setActiveTab] = useState(requestedTab);
+
+  // Sync tab if URL changes or notification triggers navigation
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') || location.state?.tab;
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, location.state]);
   
   return (
     <div className="leave-module">
       <div className="page-header">
-        <h1 className="page-title">Leave Management (HR Command Center)</h1>
-        <p className="page-description">Oversee employee availability, manage requests, and track leave balances</p>
+        <h1 className="page-title">Leave Management</h1>
       </div>
 
       <div className="leave-tabs" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>
@@ -59,7 +70,12 @@ const Leave = () => {
 
       <div className="tab-content">
         {activeTab === 'overview' && <LeaveOverview setActiveTab={setActiveTab} />}
-        {activeTab === 'requests' && <LeaveRequests />}
+        {activeTab === 'requests' && (
+          <LeaveRequests 
+            highlightId={searchParams.get('requestId') || location.state?.requestId}
+            employeeSearch={searchParams.get('employee') || location.state?.employee}
+          />
+        )}
         {activeTab === 'calendar' && <LeaveCalendar />}
         {activeTab === 'balances' && <LeaveBalances />}
         {activeTab === 'settings' && <LeaveSettings />}

@@ -7,7 +7,6 @@ const PlatformDashboard = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Platform Overview</h1>
-          <p className="page-description">Manage all tenant organizations and system health.</p>
         </div>
       </div>
 

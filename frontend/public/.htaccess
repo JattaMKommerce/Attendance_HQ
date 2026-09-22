@@ -13,6 +13,12 @@
   RewriteCond %{REQUEST_FILENAME} -l
   RewriteRule ^ - [L]
 
+  # Pass through backend API endpoints & static uploads (never rewrite to index.html)
+  RewriteCond %{REQUEST_URI} ^/api [NC,OR]
+  RewriteCond %{REQUEST_URI} ^/uploads [NC,OR]
+  RewriteCond %{REQUEST_URI} ^/health [NC]
+  RewriteRule ^ - [L]
+
   # Fall back all other routes (e.g. /app/ai, /app/employee/ai, /app/attendance) to index.html
   RewriteRule ^ index.html [L]
 </IfModule>

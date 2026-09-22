@@ -5,17 +5,36 @@ const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = requir
 
 class AuthService {
   async login(identifier, password, ipAddress, userAgent) {
-    // 1. Find user by email or employee_code
+    const cleanId = (identifier || '').trim();
+    if (!cleanId || !password) {
+      throw new Error('Email/Employee ID and password are required');
+    }
+
+    // 1. Find user by email or employee_code (case-insensitive & whitespace-trimmed)
     const [users] = await db.execute(
       `SELECT DISTINCT u.id, u.organization_id, u.email, u.password_hash, u.first_name, u.last_name, u.status 
        FROM users u 
-       LEFT JOIN employees e ON (e.user_id = u.id OR e.email = u.email)
-       WHERE u.email = ? OR e.employee_code = ?
+       LEFT JOIN employees e ON (e.user_id = u.id OR LOWER(TRIM(e.email)) = LOWER(TRIM(u.email)))
+       WHERE LOWER(TRIM(u.email)) = LOWER(?) OR UPPER(TRIM(COALESCE(e.employee_code, ''))) = UPPER(?)
        LIMIT 1`,
-      [identifier, identifier]
+      [cleanId, cleanId]
     );
 
     if (users.length === 0) {
+      // Diagnostic check: Does employee exist in employees table without an active user account?
+      try {
+        const [empCheck] = await db.execute(
+          `SELECT id, email, employee_code FROM employees 
+           WHERE LOWER(TRIM(email)) = LOWER(?) OR UPPER(TRIM(employee_code)) = UPPER(?) 
+           LIMIT 1`,
+          [cleanId, cleanId]
+        );
+        if (empCheck.length > 0) {
+          throw new Error('Your employee account exists but login credentials have not been activated. Please use the activation link sent to your email or contact HR.');
+        }
+      } catch (checkErr) {
+        if (checkErr.message.includes('activation')) throw checkErr;
+      }
       throw new Error('Invalid email, employee ID, or password');
     }
 
@@ -23,7 +42,7 @@ class AuthService {
 
     // 2. Check user status
     if (user.status !== 'active') {
-      await this.logLogin(user.id, ipAddress, userAgent, 'failed');
+      await this.safeLogLogin(user.id, ipAddress, userAgent, 'failed');
       throw new Error('User account is not active');
     }
 
@@ -34,7 +53,7 @@ class AuthService {
         [user.organization_id]
       );
       if (orgs.length === 0 || orgs[0].status === 'suspended' || orgs[0].status === 'cancelled') {
-        await this.logLogin(user.id, ipAddress, userAgent, 'failed');
+        await this.safeLogLogin(user.id, ipAddress, userAgent, 'failed');
         throw new Error('Organization account is suspended or cancelled');
       }
     }
@@ -42,7 +61,7 @@ class AuthService {
     // 4. Compare password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      await this.logLogin(user.id, ipAddress, userAgent, 'failed');
+      await this.safeLogLogin(user.id, ipAddress, userAgent, 'failed');
       throw new Error('Invalid email or password');
     }
 
@@ -50,32 +69,55 @@ class AuthService {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // 6. Store refresh token
+    // 6. Store refresh token safely
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
-    await db.execute(
-      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
-      [user.id, refreshToken, expiresAt]
-    );
+    try {
+      await db.execute(
+        'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+        [user.id, refreshToken, expiresAt]
+      );
+    } catch (refErr) {
+      console.warn('[AuthService] Could not persist refresh token:', refErr.message);
+    }
 
-    // 7. Record login history
-    await this.logLogin(user.id, ipAddress, userAgent, 'success');
+    // 7. Record login history safely (does not throw on audit logging error)
+    await this.safeLogLogin(user.id, ipAddress, userAgent, 'success');
 
     // 8. Load roles and permissions for frontend state
     const [roles] = await db.execute(
       `SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?`,
       [user.id]
     );
+
+    let userRoles = Array.from(new Set(roles.map(r => r.name)));
     
-    // Avoid returning sensitive data
+    // Auto-link employee record if not yet linked
     let [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE user_id = ?', [user.id]);
     if (emp.length === 0 && user.organization_id) {
-      [emp] = await db.execute('SELECT id, employee_code FROM employees WHERE email = ? AND organization_id = ?', [user.email, user.organization_id]);
+      [emp] = await db.execute(
+        'SELECT id, employee_code FROM employees WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND organization_id = ?',
+        [user.email, user.organization_id]
+      );
       if (emp.length > 0) {
         await db.execute('UPDATE employees SET user_id = ? WHERE id = ?', [user.id, emp[0].id]);
       }
     }
+
+    // If user has an employee record but no role in user_roles, automatically assign EMPLOYEE role
+    if (emp.length > 0 && userRoles.length === 0) {
+      const [empRole] = await db.execute('SELECT id FROM roles WHERE name = "EMPLOYEE" LIMIT 1');
+      if (empRole.length > 0) {
+        try {
+          await db.execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)', [user.id, empRole[0].id]);
+          userRoles = ['EMPLOYEE'];
+        } catch (roleErr) {
+          console.warn('[AuthService] Could not auto-assign EMPLOYEE role:', roleErr.message);
+        }
+      }
+    }
+
     const employee_id = emp.length > 0 ? emp[0].id : null;
     const employee_code = emp.length > 0 ? emp[0].employee_code : null;
 
@@ -88,17 +130,26 @@ class AuthService {
       name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
       employee_id,
       employee_code,
-      roles: roles.map(r => r.name)
+      roles: userRoles
     };
 
     return { user: safeUser, accessToken, refreshToken };
   }
 
+  async safeLogLogin(userId, ipAddress, userAgent, status) {
+    if (!userId) return; // user_id is NOT NULL in login_history
+    try {
+      await db.execute(
+        'INSERT INTO login_history (user_id, ip_address, user_agent, login_time, status) VALUES (?, ?, ?, NOW(), ?)',
+        [userId, ipAddress || null, (userAgent || '').substring(0, 490) || null, status || 'success']
+      );
+    } catch (err) {
+      console.warn('[AuthService] safeLogLogin warning:', err.message);
+    }
+  }
+
   async logLogin(userId, ipAddress, userAgent, status) {
-    await db.execute(
-      'INSERT INTO login_history (user_id, ip_address, user_agent, login_time, status) VALUES (?, ?, ?, NOW(), ?)',
-      [userId || null, ipAddress || null, userAgent || null, status || 'success']
-    );
+    return this.safeLogLogin(userId, ipAddress, userAgent, status);
   }
 
   async refresh(refreshToken) {

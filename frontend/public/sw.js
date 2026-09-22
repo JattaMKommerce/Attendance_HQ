@@ -1,5 +1,5 @@
 // JMK HRMS - Progressive Web App Service Worker
-const CACHE_NAME = 'jmk-hrms-v1';
+const CACHE_NAME = 'jmk-hrms-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

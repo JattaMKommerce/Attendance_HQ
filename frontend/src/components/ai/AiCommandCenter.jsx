@@ -448,9 +448,6 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
                 {isAdmin ? 'ADMIN OPERATOR' : 'EMPLOYEE ASSISTANT'}
               </span>
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {isAdmin ? 'Authorized for personnel, attendance, leave, and payroll actions' : 'Self-service queries for your profile, attendance, leaves, and salary'}
-            </div>
           </div>
         </div>
 
@@ -526,15 +523,9 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
                 <div className="ai-welcome-badge">
                   <Bot size={28} />
                 </div>
-                <h3 style={{ margin: '8px 0 4px 0', fontSize: '17px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  What would you like me to do?
+                <h3 style={{ margin: '8px 0 16px 0', fontSize: '17px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  What would you like Stella to do?
                 </h3>
-                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '440px' }}>
-                  {isAdmin 
-                    ? "You have full administrator clearance to manage employees, process leave reviews, generate payroll, and track organization attendance."
-                    : "Ask anything about your personal HR records: view attendance, apply for upcoming leave, check leave balances, or review your salary slip."
-                  }
-                </p>
 
                 {/* Welcome Suggestions Grid */}
                 <div className="ai-welcome-chips">
@@ -679,7 +670,7 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
             <input
               type="text"
               className="ai-chat-input-field"
-              placeholder="What would you like me to do?"
+              placeholder="Ask Stella to manage employees, attendance, leave, or payroll..."
               value={command}
               onChange={(e) => setCommand(e.target.value)}
               disabled={loading}

@@ -12,6 +12,7 @@ import MobileEmployeeLayout from './components/layout/MobileEmployeeLayout';
 // Dashboards
 import Dashboard from './pages/dashboard/Dashboard';
 import PlatformDashboard from './pages/platform/PlatformDashboard';
+import SocialFeed from './pages/social/SocialFeed';
 
 // Employees
 import EmployeeList from './pages/employees/EmployeeList';
@@ -108,17 +109,19 @@ const RootRedirect = () => {
   const { user } = useContext(AuthContext);
   if (!user) return <Navigate to="/login" replace />;
   
-  if (user.roles.includes('SUPER_ADMIN')) {
+  const userRoles = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+
+  if (userRoles.includes('SUPER_ADMIN')) {
     return <Navigate to="/platform/dashboard" replace />;
   }
   
   // If user is ONLY an employee (not admin/manager), redirect to employee portal
-  const isOnlyEmployee = user.roles.includes('EMPLOYEE') && 
-    !user.roles.includes('ORG_ADMIN') && 
-    !user.roles.includes('HR_ADMIN') && 
-    !user.roles.includes('MANAGER') &&
-    !user.roles.includes('PAYROLL_MANAGER') &&
-    !user.roles.includes('FINANCE');
+  const isOnlyEmployee = userRoles.includes('EMPLOYEE') && 
+    !userRoles.includes('ORG_ADMIN') && 
+    !userRoles.includes('HR_ADMIN') && 
+    !userRoles.includes('MANAGER') &&
+    !userRoles.includes('PAYROLL_MANAGER') &&
+    !userRoles.includes('FINANCE');
   
   if (isOnlyEmployee) {
     return <Navigate to="/app/employee/dashboard" replace />;
@@ -137,9 +140,7 @@ const AppRoutes = () => {
       <Route path="/unauthorized" element={<Unauthorized />} />
       
       {/* Root redirect based on role */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<RootRedirect />} />
-      </Route>
+      <Route path="/" element={<RootRedirect />} />
 
       {/* Organization Routes */}
       <Route element={<ProtectedRoute allowedRoles={['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE']} />}>
@@ -148,6 +149,7 @@ const AppRoutes = () => {
         
         <Route path="/app" element={<AppShell />}>
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="social" element={<SocialFeed />} />
           <Route path="employees" element={<EmployeeList />} />
           <Route path="employees/new" element={<AddEmployee />} />
           <Route path="employees/:id" element={<EmployeeProfile />} />
@@ -182,6 +184,7 @@ const AppRoutes = () => {
           {/* Employee Portal Routes */}
           <Route element={<MobileEmployeeLayout />}>
             <Route path="employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="employee/social" element={<SocialFeed />} />
             <Route path="employee/profile" element={<MyProfile />} />
             <Route path="employee/attendance" element={<MyAttendance />} />
             <Route path="employee/roster" element={<Roster />} />

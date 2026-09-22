@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './styles/variables.css';
 import './styles/components.css';
+import { initMobileApp } from './services/mobileInit';
+
+// Initialize native mobile app wrapper if running inside Capacitor
+initMobileApp();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -10,8 +14,9 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 );
 
-// Register PWA service worker in production
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Register PWA service worker in production web browser (bypass in native mobile container)
+const isNative = typeof window !== 'undefined' && Boolean(window.Capacitor?.isNativePlatform?.());
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isNative) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
@@ -22,4 +27,5 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       });
   });
 }
+
 

@@ -122,7 +122,7 @@ const authorizePermission = (requiredPermission) => {
       return res.status(401).json({ success: false, message: 'Not authenticated.' });
     }
 
-    if (req.user.roles.includes('SUPER_ADMIN')) {
+    if (req.user.roles.includes('SUPER_ADMIN') || req.user.roles.includes('ORG_ADMIN')) {
        return next();
     }
 

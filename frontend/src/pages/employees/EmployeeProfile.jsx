@@ -342,6 +342,16 @@ const EmployeeProfile = () => {
                         <option value="">Select Gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
                       </select>
                     </div>
+                    <div className="input-group"><label className="input-label">Marital Status</label>
+                      <select name="marital_status" className="input-control" value={formData.marital_status || ''} onChange={handleChange} disabled={!editMode}>
+                        <option value="">Select Marital Status</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="unmarried">Unmarried</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </div>
                     <div className="input-group"><label className="input-label">Blood Group</label>
                       <select name="blood_group" className="input-control" value={formData.blood_group || ''} onChange={handleChange} disabled={!editMode}>
                         <option value="">Select Blood Group</option>

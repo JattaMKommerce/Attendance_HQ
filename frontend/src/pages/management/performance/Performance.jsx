@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Calendar, Download, TrendingUp, TrendingDown, 
   Target, ClipboardList, Clock, AlertTriangle, 
-  Star, Award, Code, BarChart2, Package, Megaphone, DollarSign, Users, ChevronRight, BarChart
+  Star, Award, Code, BarChart2, Package, Megaphone, IndianRupee, Users, ChevronRight, BarChart
 } from 'lucide-react';
 import './Performance.css';
 
@@ -13,7 +13,7 @@ const Performance = () => {
     { name: 'Sales', employees: 86, compPct: 74, goalComp: '76%', rating: 4.0, trend: 6.2, icon: BarChart2, color: '#3b82f6', bg: '#dbeafe', barColor: '#3b82f6' },
     { name: 'Product', employees: 42, compPct: 62, goalComp: '65%', rating: 3.7, trend: 2.1, icon: Package, color: '#f97316', bg: '#ffedd5', barColor: '#f59e0b' },
     { name: 'Marketing', employees: 38, compPct: 58, goalComp: '60%', rating: 3.6, trend: -1.4, icon: Megaphone, color: '#ec4899', bg: '#fce7f3', barColor: '#ef4444' },
-    { name: 'Finance', employees: 28, compPct: 76, goalComp: '80%', rating: 4.1, trend: 7.8, icon: DollarSign, color: '#10b981', bg: '#d1fae5', barColor: '#10b981' },
+    { name: 'Finance', employees: 28, compPct: 76, goalComp: '80%', rating: 4.1, trend: 7.8, icon: IndianRupee, color: '#10b981', bg: '#d1fae5', barColor: '#10b981' },
     { name: 'HR', employees: 15, compPct: 67, goalComp: '70%', rating: 3.9, trend: 3.3, icon: Users, color: '#8b5cf6', bg: '#ede9fe', barColor: '#a855f7' },
   ];
 
@@ -30,7 +30,6 @@ const Performance = () => {
       <div className="perf-header">
         <div>
           <h1 className="perf-title">Performance</h1>
-          <p className="perf-subtitle">Department wise performance overview and analytics.</p>
         </div>
         <div className="perf-header-actions">
           <div className="perf-date-picker">

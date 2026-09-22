@@ -304,8 +304,8 @@ async function runPhase3CTests() {
 
     // 12. HIGH_ABSENTEEISM
     // Seed department with >= 15% absenteeism in current month
-    const [dept] = await db.query("SELECT id, name FROM departments WHERE organization_id = ? LIMIT 1", [orgId]);
-    const deptId = dept[0].id;
+    const [empDeptRows] = await db.query("SELECT department_id FROM employees WHERE id = ?", [empUser.employee_id]);
+    const deptId = empDeptRows[0]?.department_id || 1;
     // Insert 10 records: 3 absent, 7 present -> 30% absent (CRITICAL >= 25%)
     const curMonthDates = [
       '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-07',

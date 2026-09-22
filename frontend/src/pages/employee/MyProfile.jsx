@@ -50,7 +50,8 @@ const MyProfile = () => {
           permanent_address: emp.permanent_address || '',
           emergency_contact_name: emp.emergency_contact_name || '',
           emergency_contact_phone: emp.emergency_contact_phone || '',
-          blood_group: emp.blood_group || ''
+          blood_group: emp.blood_group || '',
+          marital_status: emp.marital_status || ''
         });
       }
     } catch (err) {
@@ -96,7 +97,8 @@ const MyProfile = () => {
         permanent_address: profile.permanent_address || '',
         emergency_contact_name: profile.emergency_contact_name || '',
         emergency_contact_phone: profile.emergency_contact_phone || '',
-        blood_group: profile.blood_group || ''
+        blood_group: profile.blood_group || '',
+        marital_status: profile.marital_status || ''
       });
     }
     setEditMode(false);
@@ -400,6 +402,28 @@ const MyProfile = () => {
                   </select>
                 ) : (
                   <div style={readOnlyBoxStyle}>{profile.blood_group || 'Not specified'}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Marital Status</label>
+                {editMode ? (
+                  <select
+                    value={formData.marital_status || ''}
+                    onChange={(e) => handleInputChange('marital_status', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="">Select marital status</option>
+                    <option value="single">Single</option>
+                    <option value="married">Married</option>
+                    <option value="unmarried">Unmarried</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
+                  </select>
+                ) : (
+                  <div style={readOnlyBoxStyle}>
+                    {profile.marital_status ? profile.marital_status.charAt(0).toUpperCase() + profile.marital_status.slice(1) : 'Not specified'}
+                  </div>
                 )}
               </div>
             </div>

@@ -191,7 +191,6 @@ export default function EmployeeActions() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={24} color="#10b981" /> Employee Actions
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage promotions, transfers, salary changes and other actions</p>
         </div>
         <button 
           type="button"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { 
-  DollarSign, 
+  IndianRupee, 
   Download, 
   Eye, 
   Calendar, 
@@ -187,7 +187,7 @@ const MyPayslips = () => {
                     </div>
                   </div>
                   <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <DollarSign size={20} />
+                    <IndianRupee size={20} />
                   </div>
                 </div>
 

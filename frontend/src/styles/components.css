@@ -149,9 +149,442 @@
   gap: var(--space-4);
 }
 
+.topbar-mobile-menu-btn {
+  display: none !important;
+}
+
+.sidebar-collapse-btn {
+  display: inline-flex;
+}
+
+.sidebar-close-mobile-btn {
+  display: none !important;
+}
+
+/* Topbar Search Trigger & Badges */
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  width: 250px;
+  max-width: 250px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+.search-shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.topbar-org-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  background-color: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── Live Auto-Updating India Time & Date Widget ────────────── */
+.topbar-india-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  font-size: 12.5px;
+  color: #1e293b;
+  font-weight: 500;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.topbar-india-time:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.india-time-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: indiaLivePulse 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes indiaLivePulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25); }
+  50% { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.35); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25); }
+}
+
+.india-time-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.india-date-text {
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: -0.01em;
+}
+
+.india-time-divider {
+  color: #cbd5e1;
+  font-weight: 300;
+}
+
+.india-time-text {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.india-tz-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  letter-spacing: 0.02em;
+}
+
+/* ── Gmail-style Notification Badge ────────────────────────── */
+.topbar-notif-btn {
+  position: relative !important;
+}
+
+.gmail-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ea4335;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(234, 67, 53, 0.45);
+  animation: gmailBadgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes gmailBadgePop {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── iPhone Notification Bar / Center (Clean Solid Frosted Glass) ───────── */
+.ios-notif-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: transparent;
+}
+
+.ios-notif-bar {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 8px;
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1.5px solid rgba(226, 232, 240, 0.95);
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 50px rgba(15, 23, 42, 0.18),
+    0 4px 16px rgba(15, 23, 42, 0.08);
+  z-index: 9999;
+  overflow: hidden;
+  animation: iosNotificationDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes iosNotificationDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ios-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ios-notif-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ios-notif-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.ios-notif-count-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(234, 67, 53, 0.10);
+  color: #ea4335;
+  border: 1px solid rgba(234, 67, 53, 0.20);
+}
+
+.ios-notif-clear-btn {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.ios-notif-clear-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ios-notif-body {
+  padding: 12px 14px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8fafc;
+}
+
+.ios-notif-body::-webkit-scrollbar {
+  width: 5px;
+}
+.ios-notif-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+/* Individual Notification Card - Must not shrink */
+.ios-notif-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0; /* CRITICAL: Prevents flexbox from collapsing cards */
+  position: relative;
+  cursor: pointer;
+}
+
+.ios-notif-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.ios-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ios-card-app {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ios-card-app-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.ios-card-app-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.ios-card-time {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ios-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ios-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.ios-card-desc {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.ios-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ios-action-primary {
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.ios-action-primary:hover {
+  background: #2563eb;
+}
+
+.ios-action-dismiss {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ios-action-dismiss:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.ios-notif-footer-link {
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.ios-notif-footer-link:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.ios-notif-empty {
+  padding: 36px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .ios-notif-bar {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    border-radius: 16px;
+  }
+}
+
 .main-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--space-6) var(--space-8);
 }
 
@@ -182,12 +615,28 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .topbar-mobile-menu-btn {
+    display: inline-flex !important;
+  }
+
+  .sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  .sidebar-close-mobile-btn {
+    display: inline-flex !important;
+  }
+
   .sidebar {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
+    width: 280px;
+    max-width: 85vw;
     transform: translateX(-100%);
+    z-index: 50;
+    box-shadow: 10px 0 40px rgba(15, 23, 42, 0.25);
   }
   
   .sidebar.mobile-open {
@@ -196,10 +645,89 @@
   
   .sidebar-overlay.visible {
     display: block;
+    z-index: 45;
   }
   
+  /* Topbar Mobile Constraints - Prevents Cutting Off */
+  .topbar {
+    padding: 0 12px;
+    height: 56px;
+    gap: 8px;
+    overflow-x: hidden;
+  }
+
+  .topbar-left {
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  /* Compact India Time widget on mobile */
+  .topbar-india-time {
+    padding: 4px 10px;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .india-date-text, .india-time-divider {
+    display: none;
+  }
+
+  .topbar-search-trigger {
+    display: none !important;
+  }
+
+  .topbar-org-badge {
+    display: none !important;
+  }
+
+  .topbar-right {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .topbar-right .icon-btn {
+    padding: 7px;
+  }
+
   .main-content {
-    padding: var(--space-4);
+    padding: 14px 12px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .page-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: 0 10px;
+    gap: 4px;
+  }
+
+  .topbar-left, .topbar-right {
+    gap: 4px;
+  }
+
+  .topbar-right .icon-btn {
+    padding: 6px;
+  }
+
+  .main-content {
+    padding: 12px 8px;
   }
 }
 
@@ -387,10 +915,13 @@
   letter-spacing: -0.02em;
 }
 
-.page-description {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+/* Suppress brief details/subtitles below headings across entire portal */
+.page-description,
+.att-subtitle,
+.dash-subtitle,
+.perf-subtitle,
+.ep-page-sub {
+  display: none !important;
 }
 
 .page-actions {

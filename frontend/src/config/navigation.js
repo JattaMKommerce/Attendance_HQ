@@ -3,7 +3,7 @@ import {
   Users, 
   Calendar, 
   Umbrella,
-  DollarSign,
+  IndianRupee,
   UserPlus,
   Briefcase,
   Target,
@@ -44,10 +44,11 @@ export const employeeNavigation = [
     group: 'My Workspace',
     items: [
       { label: 'Dashboard',        path: '/app/employee/dashboard',    icon: LayoutDashboard, roles: ['EMPLOYEE'] },
-      { label: 'AI Assistant',     path: '/app/employee/ai',           icon: Bot,             roles: ['EMPLOYEE'] },
+      { label: 'JMK Social',       path: '/app/social',                icon: MessageSquare,   roles: ['EMPLOYEE'] },
+      { label: 'Stella AI',        path: '/app/employee/ai',           icon: Bot,             roles: ['EMPLOYEE'] },
       { label: 'My Attendance',    path: '/app/employee/attendance',   icon: Clock,           roles: ['EMPLOYEE'] },
       { label: 'My Leave',         path: '/app/employee/leave',        icon: Umbrella,        roles: ['EMPLOYEE'] },
-      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: DollarSign,      roles: ['EMPLOYEE'] },
+      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: IndianRupee,      roles: ['EMPLOYEE'] },
       { label: 'My Documents',     path: '/app/employee/documents',    icon: FileText,        roles: ['EMPLOYEE'] },
       { label: 'Announcements',    path: '/app/employee/announcements',icon: Megaphone,       roles: ['EMPLOYEE'] },
       { label: 'My Shift & Roster',path: '/app/employee/roster',       icon: CalendarDays,    roles: ['EMPLOYEE'] },
@@ -70,7 +71,8 @@ export const organizationNavigation = [
     group: 'Workspace',
     items: [
       { label: 'Dashboard',    path: '/app/dashboard',   icon: LayoutDashboard, roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
-      { label: 'AI Assistant', path: '/app/ai',          icon: Bot,             roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'JMK Social',   path: '/app/social',      icon: MessageSquare,   roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Stella AI',    path: '/app/ai',          icon: Bot,             roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'PAYROLL_MANAGER', 'FINANCE'] },
       { label: 'Onboarding',   path: '/app/employees',   icon: Users,           roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { label: 'Attendance',   path: '/app/attendance',  icon: Calendar,        roles: ['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
     ]
@@ -78,7 +80,7 @@ export const organizationNavigation = [
   {
     group: 'Management',
     items: [
-      { label: 'Payroll',     path: '/app/payroll',     icon: DollarSign, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
+      { label: 'Payroll',     path: '/app/payroll',     icon: IndianRupee, roles: ['ORG_ADMIN', 'PAYROLL_MANAGER', 'FINANCE'] },
     ]
   },
   {
@@ -108,7 +110,7 @@ export const platformNavigation = [
       { label: 'Overview', path: '/platform/dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN'] },
       { label: 'Organizations', path: '/platform/organizations', icon: Building, roles: ['SUPER_ADMIN'] },
       { label: 'Subscriptions', path: '/platform/subscriptions', icon: CreditCard, roles: ['SUPER_ADMIN'] },
-      { label: 'Payments', path: '/platform/payments', icon: DollarSign, roles: ['SUPER_ADMIN'] },
+      { label: 'Payments', path: '/platform/payments', icon: IndianRupee, roles: ['SUPER_ADMIN'] },
       { label: 'Plans', path: '/platform/plans', icon: Package, roles: ['SUPER_ADMIN'] },
     ]
   },

@@ -38,7 +38,6 @@ const EmployeeList = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Employees</h1>
-          <p className="page-description">Manage your organization's workforce.</p>
         </div>
         <div className="page-actions">
           <button 

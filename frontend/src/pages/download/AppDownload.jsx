@@ -277,7 +277,46 @@ export default function AppDownload() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '18px' }}>🤖</span>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>How to Install on Android</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Download or Install for Android</h3>
+              </div>
+
+              {/* Direct APK Download Button */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '14px',
+                padding: '16px',
+                marginBottom: '20px',
+                textAlign: 'center'
+              }}>
+                <a
+                  href="/jmk-hrms.apk"
+                  download="jmk-hrms.apk"
+                  className="btn"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 24px',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    backgroundColor: '#059669',
+                    color: '#ffffff',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 14px rgba(5, 150, 105, 0.28)'
+                  }}
+                >
+                  <Download size={18} />
+                  Download Production APK (v1.0)
+                </a>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
+                  Direct APK Download • Verified Release Build • Target Android 16 (API 36)
+                </div>
+              </div>
+
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#475569', marginBottom: '12px' }}>
+                Alternative: Install via Chrome (PWA)
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

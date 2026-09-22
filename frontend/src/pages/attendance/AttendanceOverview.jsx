@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Calendar, Search, AlertCircle, Clock, CheckSquare, 
   Users, CheckCircle, XCircle, Download, 
@@ -14,10 +14,24 @@ import './Attendance.css';
 
 const AttendanceOverview = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewEmployeeId, setViewEmployeeId] = useState(null);
+
+  // Sync query parameters when redirected from specific notification
+  useEffect(() => {
+    const urlStatus = searchParams.get('status');
+    const urlSearch = searchParams.get('search');
+    const urlDate = searchParams.get('date');
+    const urlEmpId = searchParams.get('employeeId');
+
+    if (urlStatus) setStatusFilter(urlStatus);
+    if (urlSearch) setSearch(urlSearch);
+    if (urlDate) setDate(urlDate);
+    if (urlEmpId) setViewEmployeeId(Number(urlEmpId));
+  }, [searchParams]);
   
   const [metrics, setMetrics] = useState({
     totalEmployees: 0,
@@ -180,7 +194,6 @@ const AttendanceOverview = () => {
       <div className="att-header">
         <div>
           <h1 className="att-title">Attendance</h1>
-          <p className="att-subtitle">Monitor employee attendance, working hours and attendance issues.</p>
         </div>
         <div className="att-header-actions">
           <div className="att-date-picker">

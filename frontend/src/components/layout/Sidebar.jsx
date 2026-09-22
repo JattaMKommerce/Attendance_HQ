@@ -50,25 +50,21 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
         <div className="sidebar-header">
           <div className="brand" style={{ display: collapsed ? 'none' : 'flex' }}>
             <Command className="brand-icon" size={24} />
-            <span>HRMS</span>
+            <span>JMK</span>
           </div>
           <button
-            className="icon-btn"
+            className="icon-btn sidebar-collapse-btn"
             onClick={() => setCollapsed(!collapsed)}
-            style={{
-              marginLeft: collapsed ? '0' : 'auto',
-              display: window.innerWidth > 768 ? 'block' : 'none',
-            }}
+            style={{ marginLeft: collapsed ? '0' : 'auto' }}
+            aria-label="Collapse sidebar"
           >
             <Menu size={20} />
           </button>
           <button
-            className="icon-btn"
+            className="icon-btn sidebar-close-mobile-btn"
             onClick={() => setIsMobileOpen(false)}
-            style={{
-              marginLeft: 'auto',
-              display: window.innerWidth <= 768 ? 'block' : 'none',
-            }}
+            style={{ marginLeft: 'auto' }}
+            aria-label="Close sidebar"
           >
             <X size={20} />
           </button>

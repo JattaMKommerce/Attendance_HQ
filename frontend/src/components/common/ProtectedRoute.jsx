@@ -3,14 +3,19 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
 const ProtectedRoute = ({ allowedRoles }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return null;
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    const hasRole = user.roles.some(role => allowedRoles.includes(role));
+    const userRoles = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
+    const hasRole = userRoles.some(role => allowedRoles.includes(role));
     if (!hasRole) {
       return <Navigate to="/unauthorized" replace />;
     }

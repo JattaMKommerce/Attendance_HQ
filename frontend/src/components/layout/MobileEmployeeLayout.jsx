@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, LogOut, Bell, LayoutGrid, Calendar, Clock, MoreHorizontal, User, DollarSign } from 'lucide-react';
+import { Home, LogOut, Bell, LayoutGrid, Calendar, Clock, MoreHorizontal, User, IndianRupee } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { EmployeeProvider, EmployeeContext } from '../../context/EmployeeContext';
 import '../../styles/employee-mobile.css';
@@ -66,7 +66,7 @@ const MobileEmployeeLayoutInner = () => {
         <BottomNavItem to="/app/employee/dashboard" icon={Home} label="Home" />
         <BottomNavItem to="/app/employee/attendance" icon={Clock} label="Attendance" />
         <BottomNavItem to="/app/employee/leave" icon={Calendar} label="Leave" />
-        <BottomNavItem to="/app/employee/payslips" icon={DollarSign} label="Payslips" />
+        <BottomNavItem to="/app/employee/payslips" icon={IndianRupee} label="Payslips" />
         <BottomNavItem to="/app/employee/more" icon={MoreHorizontal} label="More" />
       </nav>
     </div>

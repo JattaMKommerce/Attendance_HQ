@@ -192,7 +192,6 @@ export default function Probation() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UserCheck size={24} color="#3b82f6" /> Probation Management
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Track and manage employees on probation</p>
         </div>
         <button 
           type="button"

@@ -3,6 +3,16 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const emailService = require('./emailService');
 
+function generateTemporaryPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let rand = '';
+  const bytes = crypto.randomBytes(6);
+  for (let i = 0; i < 6; i++) {
+    rand += chars[bytes[i] % chars.length];
+  }
+  return `Jmk@${rand}`;
+}
+
 class EmployeeService {
   async getEmployees(organizationId, filters = {}) {
     let query = `
@@ -106,6 +116,7 @@ class EmployeeService {
     let employeeCode = data.employee_code ? data.employee_code.trim().toUpperCase() : null;
     let employeeId = null;
     let userId = null;
+    let tempPassword = null;
 
     try {
       await connection.beginTransaction();
@@ -151,12 +162,12 @@ class EmployeeService {
         throw new Error('A user account with this official email already exists');
       }
 
-      // 4. Create user account in inactive / pending state
-      const initialPlaceholder = crypto.randomBytes(32).toString('hex');
-      const initialHash = await bcrypt.hash(initialPlaceholder, 10);
+      // 4. Generate temporary password and create active user account
+      tempPassword = (data.temporary_password || data.initial_password || generateTemporaryPassword()).trim();
+      const initialHash = await bcrypt.hash(tempPassword, 10);
 
       const [userResult] = await connection.execute(
-        'INSERT INTO users (organization_id, email, password_hash, first_name, last_name, status) VALUES (?, ?, ?, ?, ?, "inactive")',
+        'INSERT INTO users (organization_id, email, password_hash, first_name, last_name, status) VALUES (?, ?, ?, ?, ?, "active")',
         [organizationId, data.email.trim(), initialHash, data.first_name.trim(), data.last_name.trim()]
       );
       userId = userResult.insertId;
@@ -176,11 +187,11 @@ class EmployeeService {
       const [result] = await connection.execute(
         `INSERT INTO employees (
           organization_id, user_id, employee_code, first_name, last_name, email, phone, 
-          gender, blood_group, date_of_birth, joining_date, employment_type, department_id, designation_id, status,
+          gender, marital_status, blood_group, date_of_birth, joining_date, employment_type, department_id, designation_id, status,
           profile_image_url, experience_type, terms_accepted, terms_accepted_at,
           current_address, permanent_address, uan_number, resume_url, gross_salary, basic_salary, hra, deductions,
           office_state, office_city
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           organizationId,
           userId,
@@ -190,6 +201,7 @@ class EmployeeService {
           data.email.trim(),
           data.phone || null,
           data.gender || null,
+          data.marital_status || null,
           data.blood_group || null,
           data.date_of_birth || null,
           data.joining_date,
@@ -309,7 +321,7 @@ class EmployeeService {
     const [orgRows] = await db.execute('SELECT name FROM organizations WHERE id = ?', [organizationId]);
     const orgName = orgRows.length > 0 ? orgRows[0].name : 'Jatta M Kommerce';
 
-    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    const appUrl = (process.env.APP_URL || 'https://hrms.jattamkommerce.com').replace(/\/+$/, '');
     const appDownloadUrl = process.env.APP_DOWNLOAD_URL || `${appUrl}/download`;
     const activationLink = `${appUrl}/activate?token=${rawToken}`;
     const shouldSendEmail = data.send_onboarding_email !== false;
@@ -326,7 +338,8 @@ class EmployeeService {
           activationLink,
           token: rawToken,
           appDownloadUrl,
-          organizationName: orgName
+          organizationName: orgName,
+          temporaryPassword: tempPassword
         });
         gmailComposeUrl = emailResult?.gmailComposeUrl || null;
       } catch (err) {
@@ -334,8 +347,8 @@ class EmployeeService {
         emailResult = { success: false, error: err.message, activationLink, token: rawToken, appDownloadUrl };
       }
     } else {
-      const subject = `Welcome to ${orgName} - Activate Your HRMS Account (${employeeCode})`;
-      const textContent = `Welcome to ${orgName} HRMS!\n\nDear ${data.first_name.trim()} ${data.last_name.trim()},\n\nYour official employee profile and HRMS account have been created.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nYOUR HRMS LOGIN CREDENTIALS & ACCESS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Official Email: ${data.email.trim()}\n• Official Employee ID: ${employeeCode}\n• Single-Use Activation Token: ${rawToken}\n• Token Validity: 48 Hours\n• HRMS Portal Access URL: ${appUrl}/login\n• Mobile App Download Link: ${appDownloadUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nSTEP 1: ACTIVATE YOUR ACCOUNT\nClick the secure activation link below to set your permanent password:\n${activationLink}\n\nSTEP 2: DOWNLOAD & INSTALL MOBILE APP\nApp Download Link: ${appDownloadUrl}\nOpen on your phone and tap "Add to Home Screen" or "Install App".`;
+      const subject = `Welcome to ${orgName} - Your HRMS Account Credentials (${employeeCode})`;
+      const textContent = `Welcome to ${orgName} HRMS!\n\nDear ${data.first_name.trim()} ${data.last_name.trim()},\n\nYour official employee profile and HRMS account have been created.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nYOUR HRMS LOGIN CREDENTIALS & ACCESS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Official Email: ${data.email.trim()}\n• Official Employee ID: ${employeeCode}\n• Temporary Login Password: ${tempPassword}\n• HRMS Portal Access URL: ${appUrl}/login\n• Mobile App Download Link: ${appDownloadUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ MANDATORY ACTION UPON FIRST LOGIN:\nLog in using your email/employee ID and temporary password, then immediately change your password in Settings -> Change Password.\n\nAlternative web activation link: ${activationLink}`;
       gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(data.email.trim())}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent.trim())}`;
     }
 
@@ -346,15 +359,16 @@ class EmployeeService {
       first_name: data.first_name.trim(),
       last_name: data.last_name.trim(),
       email: data.email.trim(),
+      temporary_password: tempPassword,
       token: rawToken,
-      account_status: 'INACTIVE',
-      activation_status: 'PENDING',
+      account_status: 'ACTIVE',
+      activation_status: 'CREDENTIALS_ISSUED',
       email_status: shouldSendEmail ? (emailResult?.success ? 'SENT' : 'FAILED') : 'SAVED_NO_EMAIL',
       email_error: emailResult?.error || null,
       activation_link: activationLink,
       app_download_url: appDownloadUrl,
       gmail_compose_url: gmailComposeUrl,
-      requires_activation: true
+      requires_activation: false
     };
   }
 
@@ -375,9 +389,10 @@ class EmployeeService {
 
     const emp = emps[0];
 
-    if (emp.user_status === 'active') {
-      throw new Error('This employee account is already active and does not require an invitation.');
-    }
+    // Generate a fresh temporary password and activate/update user
+    const tempPassword = generateTemporaryPassword();
+    const newHash = await bcrypt.hash(tempPassword, 10);
+    await db.execute('UPDATE users SET password_hash = ?, status = "active" WHERE id = ?', [newHash, emp.user_id]);
 
     // Invalidate existing unused tokens for this user
     await db.execute(
@@ -395,7 +410,7 @@ class EmployeeService {
       [organizationId, emp.user_id, emp.id, tokenHash, expiresAt]
     );
 
-    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    const appUrl = (process.env.APP_URL || 'https://hrms.jattamkommerce.com').replace(/\/+$/, '');
     const appDownloadUrl = process.env.APP_DOWNLOAD_URL || `${appUrl}/download`;
     const activationLink = `${appUrl}/activate?token=${rawToken}`;
 
@@ -408,7 +423,8 @@ class EmployeeService {
         activationLink,
         token: rawToken,
         appDownloadUrl,
-        organizationName: emp.organization_name || 'Jatta M Kommerce'
+        organizationName: emp.organization_name || 'Jatta M Kommerce',
+        temporaryPassword: tempPassword
       });
     } catch (err) {
       console.error('[EmployeeService] Resend email dispatch error:', err);
@@ -422,9 +438,10 @@ class EmployeeService {
       first_name: emp.first_name,
       last_name: emp.last_name,
       email: emp.email,
+      temporary_password: tempPassword,
       token: rawToken,
-      account_status: 'INACTIVE',
-      activation_status: 'PENDING',
+      account_status: 'ACTIVE',
+      activation_status: 'CREDENTIALS_ISSUED',
       email_status: emailResult.success ? 'SENT' : 'FAILED',
       email_error: emailResult.error || null,
       activation_link: activationLink,
@@ -463,6 +480,7 @@ class EmployeeService {
           email = COALESCE(?, email),
           phone = COALESCE(?, phone),
           gender = COALESCE(?, gender),
+          marital_status = COALESCE(?, marital_status),
           blood_group = COALESCE(?, blood_group),
           date_of_birth = COALESCE(?, date_of_birth),
           joining_date = COALESCE(?, joining_date),
@@ -498,6 +516,7 @@ class EmployeeService {
           data.email?.trim() || null,
           data.phone || null,
           data.gender || null,
+          data.marital_status || null,
           data.blood_group || null,
           data.date_of_birth || null,
           data.joining_date || null,

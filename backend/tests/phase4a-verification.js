@@ -257,6 +257,8 @@ async function runPhase4AVerification() {
   if (failed === 0) {
     console.log(`${colors.green}ALL PHASE 4A PRODUCTION-HARDENING CRITERIA VERIFIED SUCCESSFULLY!${colors.reset}\n`);
   }
+  process.exit(failed === 0 ? 0 : 1);
 }
 
 runPhase4AVerification();
+

@@ -12,9 +12,14 @@ const generateAccessToken = (user) => {
   );
 };
 
+const crypto = require('crypto');
+
 const generateRefreshToken = (user) => {
   return jwt.sign(
-    { id: user.id },
+    { 
+      id: user.id, 
+      jti: crypto.randomBytes(16).toString('hex') 
+    },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '7d' } // 7 days refresh token
   );

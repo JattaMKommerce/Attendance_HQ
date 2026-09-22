@@ -723,7 +723,8 @@ class EmployeePortalController {
         emergency_contact_name,
         emergency_contact_phone,
         emergency_contact_relationship,
-        blood_group
+        blood_group,
+        marital_status
       } = req.body;
 
       await db.query(
@@ -733,7 +734,8 @@ class EmployeePortalController {
            permanent_address = COALESCE(?, permanent_address),
            emergency_contact_name = COALESCE(?, emergency_contact_name),
            emergency_contact_phone = COALESCE(?, emergency_contact_phone),
-           blood_group = COALESCE(?, blood_group)
+           blood_group = COALESCE(?, blood_group),
+           marital_status = COALESCE(?, marital_status)
          WHERE id = ? AND organization_id = ?`,
         [
           phone,
@@ -742,6 +744,7 @@ class EmployeePortalController {
           emergency_contact_name,
           emergency_contact_phone,
           blood_group,
+          marital_status,
           empId,
           organizationId
         ]

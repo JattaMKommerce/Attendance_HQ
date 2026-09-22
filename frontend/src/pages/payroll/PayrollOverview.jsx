@@ -33,7 +33,6 @@ export default function PayrollOverview() {
   // UI States
   const [showSettings, setShowSettings]     = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showAiWidget, setShowAiWidget]     = useState(true);
   const [toast, setToast]                   = useState(null);
 
   // Dynamic Date Logic
@@ -295,9 +294,6 @@ export default function PayrollOverview() {
           <div className="stella-icon-box"><Briefcase size={20} /></div>
           <div>
             <h2 style={{ margin: 0 }}>Payroll</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-              {pendingCount} pending · {paidCount} paid · {monthName} {selectedYear}
-            </p>
           </div>
         </div>
         <div className="stella-actions">
@@ -473,28 +469,6 @@ export default function PayrollOverview() {
             ))}
           </div>
         </div>
-
-        {/* AI Widget */}
-        {showAiWidget ? (
-          <div className="stella-ai-widget">
-            <button className="stella-ai-close" onClick={() => setShowAiWidget(false)}><X size={16} /></button>
-            <div className="stella-ai-graphic">
-              <div className="stella-ai-orb" />
-              <div className="stella-ai-logo"><Sparkles size={24} /></div>
-            </div>
-            <h3>Stella AI</h3>
-            <p>Generate your financial report with ease with our AI personal assistant</p>
-            <button className="stella-btn-ai" onClick={() => { showToast('AI Assistant coming soon!'); }}>Try now!</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: '12px', cursor: 'pointer' }}
-            onClick={() => setShowAiWidget(true)}>
-            <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-              <Sparkles size={28} style={{ marginBottom: '8px' }} />
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>Show AI Widget</div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Employee Table ──────────────────────────────────────────────── */}

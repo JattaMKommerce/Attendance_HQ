@@ -38,7 +38,7 @@ export default function AiAssistantPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <h1 className="page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Bot size={26} color="var(--accent-hover)" />
-              <span>AI Command Assistant</span>
+              <span>Stella AI Assistant</span>
             </h1>
             <span style={{
               fontSize: '11px',
@@ -51,9 +51,6 @@ export default function AiAssistantPage() {
               {isAdmin ? 'ADMIN OPERATOR' : 'EMPLOYEE ASSISTANT'}
             </span>
           </div>
-          <p className="page-description" style={{ margin: 0 }}>
-            Execute natural language operations across HRMS. Speak naturally to manage attendance, leave, profiles, onboarding, and payroll.
-          </p>
         </div>
       </div>
 

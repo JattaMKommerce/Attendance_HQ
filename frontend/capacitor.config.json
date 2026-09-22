@@ -2,7 +2,6 @@
   "appId": "com.jattamkommerce.hrms",
   "appName": "JMK HRMS",
   "webDir": "dist",
-  "bundledWebRuntime": false,
   "backgroundColor": "#0f172a",
   "server": {
     "androidScheme": "https",
@@ -27,6 +26,14 @@
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER_CROP",
       "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0f172a"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
     }
   }
 }

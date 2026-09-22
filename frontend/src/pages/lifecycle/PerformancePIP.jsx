@@ -175,7 +175,6 @@ export default function PerformancePIP() {
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingDown size={24} color="#8b5cf6" /> Performance & PIP
           </h1>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage performance reviews and improvement plans</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 

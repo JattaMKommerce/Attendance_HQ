@@ -25,7 +25,6 @@ const MySettings = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Settings</h1>
-          <p className="page-description">Manage your account preferences</p>
         </div>
       </div>
 
