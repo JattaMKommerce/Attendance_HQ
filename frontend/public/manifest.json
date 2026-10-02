@@ -1,7 +1,7 @@
 {
   "id": "com.jattamkommerce.hrms",
   "short_name": "JMK HRMS",
-  "name": "Jatta M Kommerce HRMS",
+  "name": "JMK HRMS",
   "description": "Enterprise Human Resource Management, Attendance, Leave & Payroll Portal",
   "start_url": "/login",
   "scope": "/",

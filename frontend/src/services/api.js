@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 
 export const getApiBaseUrl = () => {
   // 1. Explicit environment variable takes highest precedence (Vite .env or build-time config)
@@ -7,16 +8,21 @@ export const getApiBaseUrl = () => {
     return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
   }
 
-  // 2. Running in browser
-  if (typeof window !== 'undefined') {
-    // If running inside native mobile container (Capacitor)
-    const isCapacitor = window.location.protocol === 'capacitor:' || 
-                        Boolean(window.Capacitor?.isNativePlatform?.()) ||
-                        Boolean(window.Capacitor);
-    if (isCapacitor) {
-      return 'https://hrms.jattamkommerce.com/api';
-    }
+  // 2. Running inside native mobile container (Capacitor Android / iOS APK)
+  // Most reliable check: Capacitor.isNativePlatform() returns true only when running inside a native wrapper
+  const isNativeApp = 
+    (typeof Capacitor !== 'undefined' && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform()) ||
+    (typeof window !== 'undefined' && typeof window.Capacitor !== 'undefined' && 
+     typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+    (typeof window !== 'undefined' && window.location.protocol === 'capacitor:') ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost' && !window.location.port);
 
+  if (isNativeApp) {
+    return 'https://hrms.jattamkommerce.com/api';
+  }
+
+  // 3. Running in browser
+  if (typeof window !== 'undefined') {
     // In production web deployment, default to relative '/api' for reverse proxies / custom domains
     if (import.meta.env.PROD) {
       return '/api';
@@ -50,15 +56,20 @@ export const getFileUrl = (filePath) => {
   ) {
     return filePath;
   }
+  let cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+  // Route uploads through /api/uploads/ so Passenger/Node.js reliably handles it in cPanel
+  if (cleanPath.startsWith('uploads/')) {
+    cleanPath = `api/${cleanPath}`;
+  }
   const serverBase = getServerBaseUrl();
-  const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-  return serverBase ? `${serverBase}${normalizedPath}` : normalizedPath;
+  return serverBase ? `${serverBase}/${cleanPath}` : `/${cleanPath}`;
 };
 
 export const getBaseUrl = getApiBaseUrl;
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -70,6 +81,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // When posting FormData (e.g. social uploads, profile photos), remove Content-Type so browser sets boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
@@ -79,10 +94,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Do not intercept auth check or login/logout/refresh endpoints
+    // Do not intercept login/logout/refresh endpoints themselves
     const requestUrl = originalRequest?.url || '';
     const isAuthEndpoint = requestUrl.includes('/auth/login') ||
-                           requestUrl.includes('/auth/me') ||
                            requestUrl.includes('/auth/refresh') ||
                            requestUrl.includes('/auth/logout');
 

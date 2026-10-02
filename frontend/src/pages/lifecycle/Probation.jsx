@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Search, Filter, Plus, ChevronRight, X, Calendar, Download, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { UserCheck, Search, Filter, Plus, ChevronRight, X, Calendar, Download, FileText, CheckCircle, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { fetchLifecycleContext } from './lifecycleHelper';
 
-const INITIAL_PROBATION_DATA = [
-  { id: 'EMP002', name: 'Rahul Sharma', department: 'IT', designation: 'Software Engineer', joiningDate: '2025-07-01', probationEnd: '2025-09-30', daysLeft: 5, status: 'Ending Soon', rating: 3.8, goals: '8/10', attendance: '96%', feedback: 'Good technical skills and fast learner. Needs to improve documentation and communication.' },
-  { id: 'EMP007', name: 'Priya Patel', department: 'Human Resources', designation: 'HR Executive', joiningDate: '2025-07-15', probationEnd: '2025-10-14', daysLeft: 19, status: 'On Track', rating: 4.2, goals: '5/5', attendance: '98%', feedback: 'Excellent interpersonal skills and quick ramp up on company policies.' },
-  { id: 'EMP011', name: 'Amit Kumar', department: 'Operations', designation: 'Operations Lead', joiningDate: '2025-08-01', probationEnd: '2025-10-31', daysLeft: 36, status: 'On Track', rating: 3.5, goals: '6/10', attendance: '92%', feedback: 'Shows good leadership on the floor. Punctuality can be improved.' },
-];
+const INITIAL_PROBATION_DATA = [];
 
 export default function Probation() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [tableData, setTableData] = useState(INITIAL_PROBATION_DATA);
@@ -187,8 +185,16 @@ export default function Probation() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UserCheck size={24} color="#3b82f6" /> Probation Management
           </h1>

@@ -34,18 +34,59 @@ async function getMySalarySlip(organizationId, userContext, dateObj) {
 
     if (empSalary.length > 0 && empSalary[0].gross_salary) {
       const s = empSalary[0];
-      const net = (parseFloat(s.gross_salary || 0) - parseFloat(s.deductions || 0) + parseFloat(s.incentives || 0)).toFixed(2);
+      const gross = parseFloat(s.gross_salary || 0);
+
+      // Month calculation
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      let targetMonthIdx = monthNames.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+      if (targetMonthIdx === -1) targetMonthIdx = new Date().getMonth();
+      const targetMonthNum = targetMonthIdx + 1;
+      const totalDaysInMonth = new Date(year, targetMonthNum, 0).getDate();
+      const perDayGross = totalDaysInMonth > 0 ? (gross / totalDaysInMonth) : 0;
+
+      // Check approved leaves & recorded absences
+      const [leaves] = await db.query(
+        `SELECT SUM(total_days) as total_leaves FROM leave_requests 
+         WHERE (employee_id = ? OR user_id = ?) AND organization_id = ? AND status = 'approved'
+           AND MONTH(start_date) = ? AND YEAR(start_date) = ?`,
+        [s.id, userId, organizationId, targetMonthNum, year]
+      );
+      const [absents] = await db.query(
+        `SELECT COUNT(*) as absent_count FROM attendance_records
+         WHERE employee_id = ? AND organization_id = ? AND status = 'absent'
+           AND MONTH(date) = ? AND YEAR(date) = ?`,
+        [s.id, organizationId, targetMonthNum, year]
+      );
+
+      const totalAbsences = Math.max(parseFloat(leaves[0]?.total_leaves || 0), parseInt(absents[0]?.absent_count || 0, 10));
+      const paidQuota = s.monthly_paid_leaves !== null && s.monthly_paid_leaves !== undefined ? parseInt(s.monthly_paid_leaves, 10) : 1;
+
+      const paidUsed = Math.min(totalAbsences, paidQuota);
+      const unpaidDays = Math.max(0, totalAbsences - paidQuota);
+      const lopDeduction = Math.round(unpaidDays * perDayGross);
+      const otherDeductions = parseFloat(s.deductions || 0);
+      const incentives = parseFloat(s.incentives || 0);
+      const netPay = Math.max(0, Math.round(gross - lopDeduction - otherDeductions + incentives));
+
       return {
         success: true,
         message: `Salary breakdown for **${monthName} ${year}**:
-• **Gross Pay**: ₹${s.gross_salary}
-• **Basic Salary**: ₹${s.basic_salary || '0.00'}
-• **HRA**: ₹${s.hra || '0.00'}
-• **Deductions**: ₹${s.deductions || '0.00'}
-• **Net Payable**: **₹${net}**
+• **Gross Pay**: ₹${gross.toLocaleString('en-IN')}
+• **Company Paid Leave Allowed**: ${paidQuota} day/month (Covered, ₹0 deducted)
+• **Total Absences/Leaves**: ${totalAbsences} day(s)
+${unpaidDays > 0 ? `• **Unpaid / Loss of Pay (LOP)**: ${unpaidDays} day(s) (-₹${lopDeduction.toLocaleString('en-IN')})` : '• **Loss of Pay (LOP)**: ₹0 (Within paid leave allowance)'}
+• **Other Deductions**: ₹${otherDeductions.toLocaleString('en-IN')}
+• **Net Payable Salary**: **₹${netPay.toLocaleString('en-IN')}**
 
-*(Official payslip PDF is available in My Payslips)*`,
-        data: s
+*(Calculated automatically based on ${totalDaysInMonth - unpaidDays}/${totalDaysInMonth} payable days)*`,
+        data: {
+          gross,
+          netPay,
+          paidQuota,
+          totalAbsences,
+          unpaidDays,
+          lopDeduction
+        }
       };
     }
 

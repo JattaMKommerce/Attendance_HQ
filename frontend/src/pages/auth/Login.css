@@ -1,5 +1,5 @@
 /* JMK HRMS Ultra-Modern Glassmorphic Authentication Page */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 .auth-page-container {
   min-height: 100vh;
@@ -13,7 +13,7 @@
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Subtle soft depth overlay on the left */
@@ -29,22 +29,55 @@
   pointer-events: none;
 }
 
-/* Top-Left Brand Pill */
-.auth-brand-pill {
+/* Top Navigation Bar */
+.auth-top-bar {
   position: absolute;
-  top: 36px;
-  left: 44px;
-  z-index: 10;
+  top: 28px;
+  left: 36px;
+  right: 36px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Brand Pill */
+.auth-brand-pill {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 16px;
-  background: rgba(255, 255, 255, 0.55);
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 9999px;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.auth-back-to-site-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.auth-back-to-site-btn:hover {
+  background: #0f172a;
+  color: #93c5fd;
+  transform: translateX(-2px);
+  text-decoration: none;
 }
 
 .brand-dot {
@@ -115,22 +148,27 @@
 /* Centered Glassmorphism Box for Credentials */
 .auth-glass-box {
   width: 100%;
-  max-width: 420px;
-  background: rgba(255, 255, 255, 0.54);
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.58);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1.5px solid rgba(255, 255, 255, 0.82);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
   border-radius: 26px;
   box-shadow: 
     0 30px 60px -15px rgba(15, 23, 42, 0.28),
     0 12px 24px -8px rgba(0, 0, 0, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.95);
-  padding: 38px 34px;
+  padding: 34px 32px;
   box-sizing: border-box;
   position: relative;
   z-index: 5;
   margin: auto;
   animation: authBoxFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: max-width 0.25s ease;
+}
+
+.auth-glass-box-signup {
+  max-width: 490px;
 }
 
 @keyframes authBoxFadeIn {
@@ -144,10 +182,39 @@
   }
 }
 
+/* Auth Tabs Container */
+.auth-tabs-container {
+  display: flex;
+  background: rgba(241, 245, 249, 0.85);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.auth-tab-btn {
+  flex: 1;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
 /* Header */
 .auth-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .auth-company-badge {
@@ -156,12 +223,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #2563eb;
-  background: rgba(37, 99, 235, 0.08);
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(37, 99, 235, 0.15);
+  color: #64748b;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  margin-bottom: 8px;
+  border: none;
 }
 
 .auth-title {
@@ -185,12 +252,130 @@
   align-items: center;
   gap: 10px;
   padding: 11px 14px;
-  background-color: rgba(254, 242, 242, 0.88);
+  background-color: rgba(254, 242, 242, 0.92);
   color: #dc2626;
   border: 1px solid #fecaca;
   border-radius: 10px;
   font-size: 13px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+}
+
+/* Success Banner */
+.auth-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background-color: rgba(240, 253, 244, 0.95);
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.auth-name-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.auth-strength-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.auth-strength-bar {
+  flex: 1;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.auth-strength-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.auth-strength-text {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.auth-terms-row {
+  margin-top: -4px;
+}
+
+.auth-quick-access {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-quick-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-quick-chip {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.auth-quick-chip:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.auth-switch-footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-switch-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.auth-switch-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 /* Form */
@@ -472,70 +657,83 @@
 @media (max-width: 960px) {
   .auth-page-container {
     flex-direction: column;
-    padding: 32px 20px;
+    padding: 80px 20px 32px;
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
     justify-content: center;
   }
 
-  .auth-brand-pill {
-    position: static;
-    margin-bottom: 18px;
-    align-self: center;
-  }
-
+  /* Hide tagline on tablets/mobile - too much clutter */
   .auth-corner-tagline {
-    position: static;
-    margin-bottom: 24px;
-    text-align: center;
-    align-items: center;
-  }
-
-  .corner-tagline-sans {
-    font-size: 26px;
-  }
-
-  .corner-tagline-serif {
-    font-size: 32px;
-  }
-
-  .corner-tagline-jmk {
-    font-size: 17px;
-  }
-
-  .corner-tagline-row {
-    justify-content: center;
+    display: none;
   }
 
   .auth-glass-box {
     max-width: 420px;
+    width: 100%;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .auth-page-container {
-    padding: 24px 14px;
+    padding: 72px 16px 24px;
   }
 
-  .corner-tagline-sans {
-    font-size: 22px;
+  /* Compact top bar on mobile */
+  .auth-top-bar {
+    top: 16px;
+    left: 16px;
+    right: 16px;
   }
 
-  .corner-tagline-serif {
-    font-size: 28px;
+  .auth-brand-pill {
+    padding: 6px 14px;
   }
 
-  .corner-tagline-jmk {
-    font-size: 15px;
+  .brand-text {
+    font-size: 12px;
+  }
+
+  .auth-back-to-site-btn {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   .auth-glass-box {
-    padding: 28px 20px;
-    border-radius: 20px;
+    padding: 24px 18px;
+    border-radius: 18px;
+    max-width: 100%;
   }
 
   .auth-title {
-    font-size: 22px;
+    font-size: 21px;
+  }
+
+  .auth-subtitle {
+    font-size: 12.5px;
+  }
+
+  .auth-form {
+    gap: 14px;
+  }
+
+  .auth-footer-tag {
+    font-size: 11px;
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-page-container {
+    padding: 68px 12px 20px;
+  }
+
+  .auth-glass-box {
+    padding: 20px 14px;
+  }
+
+  .auth-title {
+    font-size: 19px;
   }
 }

@@ -3,68 +3,113 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
-// Ensure upload directories exist
-const uploadBase = path.resolve(__dirname, '../uploads');
+// Ensure upload directories exist safely without blocking server boot
+const uploadBase = path.resolve(__dirname, '../../uploads');
 ['photos', 'documents', 'social'].forEach(subDir => {
-  const dirPath = path.join(uploadBase, subDir);
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+  try {
+    const dirPath = path.join(uploadBase, subDir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[UploadMiddleware] Warning: Could not create upload directory ${subDir}:`, err.message);
   }
 });
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    let targetDir = uploadBase;
     if (file.fieldname === 'photo') {
-      cb(null, path.join(uploadBase, 'photos'));
+      targetDir = path.join(uploadBase, 'photos');
     } else if (file.fieldname === 'document' || file.fieldname === 'resume') {
-      cb(null, path.join(uploadBase, 'documents'));
+      targetDir = path.join(uploadBase, 'documents');
     } else if (file.fieldname === 'media') {
-      cb(null, path.join(uploadBase, 'social'));
-    } else {
-      cb(null, uploadBase);
+      targetDir = path.join(uploadBase, 'social');
     }
+
+    // Guard: Ensure directory physically exists right before saving
+    if (!fs.existsSync(targetDir)) {
+      try {
+        fs.mkdirSync(targetDir, { recursive: true });
+      } catch (err) {
+        console.error('[UploadMiddleware] Failed to create directory:', targetDir, err);
+      }
+    }
+    cb(null, targetDir);
   },
   filename: function (req, file, cb) {
-    // Generate secure unique filename
-    const uniqueName = uuidv4() + path.extname(file.originalname).toLowerCase();
+    // Generate secure unique filename with resilient extension fallback
+    let ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ext) {
+      const mime = (file.mimetype || '').toLowerCase();
+      if (mime.includes('jpeg') || mime.includes('jpg')) ext = '.jpg';
+      else if (mime.includes('png')) ext = '.png';
+      else if (mime.includes('webp')) ext = '.webp';
+      else if (mime.includes('gif')) ext = '.gif';
+      else if (mime.includes('heic')) ext = '.heic';
+      else if (mime.includes('heif')) ext = '.heif';
+      else if (mime.includes('pdf')) ext = '.pdf';
+      else ext = '.jpg'; // safe default for mobile camera captures
+    }
+    const uniqueName = uuidv4() + ext;
     cb(null, uniqueName);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
-  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-  const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const mime = (file.mimetype || '').toLowerCase();
 
-  const allowedDocExts = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'];
+  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.jfif', '.svg', '.avif'];
+  const isImageMime = mime.startsWith('image/') || mime === 'application/octet-stream';
+  const isImageExt = allowedImageExts.includes(ext);
+
+  const allowedDocExts = [
+    '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.jfif', 
+    '.bmp', '.doc', '.docx', '.odt', '.rtf', '.txt', '.xls', '.xlsx'
+  ];
   const allowedDocMimes = [
     'application/pdf', 
+    'application/x-pdf',
+    'application/acrobat',
+    'applications/pdf',
+    'text/pdf',
+    'text/plain',
     'image/jpeg', 
+    'image/pjpeg',
     'image/png', 
+    'image/webp',
+    'image/heic',
+    'image/heif',
+    'image/bmp',
     'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/octet-stream'
   ];
 
   if (file.fieldname === 'photo') {
-    if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+    if (allowedImageExts.includes(ext) || mime.startsWith('image/') || isImageMime) {
       cb(null, true);
     } else {
       cb(new Error('Invalid photo format. Only JPG, PNG, WEBP allowed.'), false);
     }
   } else if (file.fieldname === 'document' || file.fieldname === 'resume') {
-    if (allowedDocExts.includes(ext) && allowedDocMimes.includes(file.mimetype)) {
+    if (allowedDocExts.includes(ext) || allowedDocMimes.includes(mime) || mime.startsWith('image/') || isImageExt || !ext) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid document format. Only PDF, JPG, PNG, DOC, DOCX allowed.'), false);
+      cb(new Error('Invalid document format. Supported formats: PDF, JPG, PNG, WEBP, DOC, DOCX.'), false);
     }
   } else if (file.fieldname === 'media') {
-    if (allowedImageExts.includes(ext) && allowedImageMimes.includes(file.mimetype)) {
+    if (isImageMime || isImageExt || !ext) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid media format. Only JPG, JPEG, PNG, WEBP, and GIF images are allowed.'), false);
+      cb(new Error('Invalid media format. Only image files (JPG, PNG, WEBP, GIF, HEIC, etc.) are allowed.'), false);
     }
   } else {
-    cb(new Error('Unexpected upload field: ' + file.fieldname), false);
+    // Permissive fallback so legitimate uploads are not rejected
+    cb(null, true);
   }
 };
 
@@ -80,14 +125,30 @@ const upload = multer({
 const uploadSocial = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per image
+    fileSize: 50 * 1024 * 1024,
     files: 5
   },
   fileFilter: fileFilter
 });
 
+// Middleware helper that catches Multer errors and returns clean JSON error response
+const handleSingleUpload = (fieldName) => {
+  return (req, res, next) => {
+    upload.single(fieldName)(req, res, (err) => {
+      if (err) {
+        console.error(`[Upload Error on ${fieldName}]:`, err.message);
+        return res.status(400).json({
+          success: false,
+          message: err.message || `Failed to upload ${fieldName}. Ensure the file is under 50MB and in a valid format.`
+        });
+      }
+      next();
+    });
+  };
+};
+
 upload.social = uploadSocial;
 upload.uploadSocial = uploadSocial;
+upload.handleSingleUpload = handleSingleUpload;
 
 module.exports = upload;
-

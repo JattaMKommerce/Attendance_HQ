@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import LeaveOverview from './LeaveOverview';
 import LeaveRequests from './LeaveRequests';
 import LeaveCalendar from './LeaveCalendar';
 import LeaveBalances from './LeaveBalances';
 import LeaveSettings from './LeaveSettings';
 import LeaveHolidays from './LeaveHolidays';
-import { LayoutDashboard, Inbox, Calendar, Scale, Settings } from 'lucide-react';
+import { LayoutDashboard, Inbox, Calendar, Scale, Settings, ArrowLeft } from 'lucide-react';
 import './Leave.css';
 
 const Leave = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const requestedTab = searchParams.get('tab') || location.state?.tab || 'overview';
@@ -25,8 +26,17 @@ const Leave = () => {
   
   return (
     <div className="leave-module">
-      <div className="page-header">
-        <h1 className="page-title">Leave Management</h1>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button 
+          type="button" 
+          className="btn btn-secondary btn-sm"
+          onClick={() => navigate(-1)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+          title="Go Back"
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+        <h1 className="page-title" style={{ margin: 0 }}>Leave Management</h1>
       </div>
 
       <div className="leave-tabs" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>

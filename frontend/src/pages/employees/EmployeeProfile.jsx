@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Send, CheckCircle, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
-import { getEmployeeById, updateEmployee, getLookups, resendInvitation } from '../../services/employeeApi';
+import { ArrowLeft, Save, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Send, CheckCircle, AlertTriangle, ExternalLink, Copy, Check, Camera, Loader, Download, FileText, Building2, Plus, Trash2 } from 'lucide-react';
+import { getEmployeeById, updateEmployee, getLookups, resendInvitation, uploadPhoto, uploadDocument } from '../../services/employeeApi';
 import EmployeeIdCard from '../../components/EmployeeIdCard';
 import { getFileUrl } from '../../services/api';
 import { getIndiaStatesList, getCitiesForIndiaState, getIndiaStateName } from '../../utils/geoService';
@@ -25,6 +25,9 @@ const EmployeeProfile = () => {
   const [formData, setFormData] = useState({});
   const [showIdModal, setShowIdModal] = useState(false);
   const [cities, setCities] = useState([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   useEffect(() => {
     if (formData.office_state) {
@@ -34,13 +37,55 @@ const EmployeeProfile = () => {
     }
   }, [formData.office_state]);
 
+  const sanitizeDate = (val) => {
+    if (!val) return '';
+    return String(val).split('T')[0];
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file (PNG, JPG, JPEG)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image file size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      setError(null);
+      const res = await uploadPhoto(file);
+      if (res.success && res.data?.file_url) {
+        const newPhotoUrl = res.data.file_url;
+        setEmployee(prev => ({ ...prev, profile_image_url: newPhotoUrl }));
+        setFormData(prev => ({ ...prev, profile_image_url: newPhotoUrl }));
+        await updateEmployee(id, { profile_image_url: newPhotoUrl });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload profile photo');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const fetchEmployee = async () => {
     try {
       setLoading(true);
       const res = await getEmployeeById(id);
-      if (res.success) {
-        setEmployee(res.data);
-        setFormData(res.data);
+      if (res.success && res.data) {
+        const sanitized = {
+          ...res.data,
+          date_of_birth: sanitizeDate(res.data.date_of_birth),
+          joining_date: sanitizeDate(res.data.joining_date)
+        };
+        setEmployee(sanitized);
+        setFormData(sanitized);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load employee details');
@@ -68,6 +113,32 @@ const EmployeeProfile = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Auto-uppercase IFSC
+  const handleIFSCChange = (e) => {
+    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    setFormData(prev => ({ ...prev, ifsc_code: val }));
+  };
+
+  // Handle document upload for profile
+  const handleProfileDocUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      setUploadingDoc(true);
+      const res = await uploadDocument(file);
+      if (res.success) {
+        const newDoc = { title: res.data.original_name, document_type: 'other', file_url: res.data.file_url };
+        // Save to employee documents through update
+        const updatedDocs = [...(formData.documents || []), newDoc];
+        setFormData(prev => ({ ...prev, documents: updatedDocs }));
+        await updateEmployee(id, { documents: updatedDocs });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Document upload failed');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const handleStateChange = (e) => {
     const stateIso = e.target.value;
     setFormData(prev => ({
@@ -82,9 +153,20 @@ const EmployeeProfile = () => {
     setSaving(true);
     setError(null);
     try {
-      const res = await updateEmployee(id, formData);
+      const payload = {
+        ...formData,
+        date_of_birth: sanitizeDate(formData.date_of_birth) || null,
+        joining_date: sanitizeDate(formData.joining_date) || null
+      };
+      const res = await updateEmployee(id, payload);
       if (res.success) {
-        setEmployee(res.data);
+        const sanitized = {
+          ...res.data,
+          date_of_birth: sanitizeDate(res.data?.date_of_birth),
+          joining_date: sanitizeDate(res.data?.joining_date)
+        };
+        setEmployee(sanitized);
+        setFormData(sanitized);
         setEditMode(false);
       }
     } catch (err) {
@@ -103,7 +185,7 @@ const EmployeeProfile = () => {
         setResendStatus({
           type: res.data.email_status === 'SENT' ? 'success' : 'warning',
           text: res.data.email_status === 'SENT' 
-            ? 'Onboarding invitation email with credentials and app download link resent successfully!'
+            ? `Onboarding invitation email with credentials sent to ${employee.email} from hr.jattamkommerce@gmail.com!`
             : 'New activation link & token generated. Direct Gmail link ready below.',
           data: res.data
         });
@@ -250,32 +332,79 @@ const EmployeeProfile = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
          <button className="btn btn-secondary" onClick={() => navigate('/app/employees')}><ArrowLeft size={16} /> Back to List</button>
          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {employee.user_status === 'inactive' && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleResendInvite}
-                disabled={resending}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Send size={14} /> {resending ? 'Sending...' : 'Resend Onboarding Invite'}
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleResendInvite}
+              disabled={resending}
+              title="Send Onboarding Credentials Email from hr.jattamkommerce@gmail.com"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#1d4ed8', borderColor: '#bfdbfe', backgroundColor: '#eff6ff' }}
+            >
+              <Mail size={14} /> {resending ? 'Sending...' : 'Send Onboarding Email Again'}
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => setShowIdModal(true)}>View ID Card</button>
-            <button className="btn btn-secondary" onClick={() => navigate('/app/employees')}>Cancel</button>
-            <button className="btn btn-primary" onClick={() => { setEditMode(true); }}><Save size={16} /> Edit Employee</button>
+            {editMode ? (
+              <>
+                <button type="button" className="btn btn-secondary" onClick={() => { setEditMode(false); setFormData(employee); }}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}><Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}</button>
+              </>
+            ) : (
+              <button className="btn btn-primary" onClick={() => setEditMode(true)}><Save size={16} /> Edit Employee</button>
+            )}
          </div>
       </div>
 
       {/* Profile Header */}
       <div className="card" style={{ padding: '24px', marginBottom: '24px', display: 'flex', gap: '24px', alignItems: 'center' }}>
-         {employee.profile_image_url ? (
-            <img src={getFileUrl(employee.profile_image_url)} alt="Profile" className="profile-avatar-large" />
-         ) : (
-            <div className="profile-avatar-placeholder">
-               {employee.first_name[0]}{employee.last_name[0]}
-            </div>
-         )}
+         <div style={{ position: 'relative', width: '96px', height: '96px', flexShrink: 0 }}>
+            {formData.profile_image_url || employee.profile_image_url ? (
+               <img 
+                 src={getFileUrl(formData.profile_image_url || employee.profile_image_url)} 
+                 alt="Profile" 
+                 className="profile-avatar-large" 
+                 style={{ width: '96px', height: '96px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #e2e8f0', display: 'block' }}
+               />
+            ) : (
+               <div className="profile-avatar-placeholder" style={{ width: '96px', height: '96px', borderRadius: '50%', fontSize: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {employee.first_name[0]}{employee.last_name[0]}
+               </div>
+            )}
+            
+            {/* Clickable Camera / Upload Overlay */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              accept="image/png, image/jpeg, image/jpg, image/webp" 
+              onChange={handlePhotoUpload} 
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              title="Click to upload or update profile photo"
+              style={{
+                position: 'absolute',
+                bottom: '-2px',
+                right: '-2px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: '2px solid #ffffff',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.2s',
+                zIndex: 2
+              }}
+            >
+              {uploadingPhoto ? <Loader size={16} className="spin" /> : <Camera size={16} />}
+            </button>
+         </div>
          
          <div className="profile-header-info">
             <div className="profile-header-top">
@@ -399,19 +528,128 @@ const EmployeeProfile = () => {
                    <div className="card" style={{ marginBottom: '24px' }}>
                      <div className="card-header"><h3 className="card-title">Salary Details</h3></div>
                      <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                       <div className="input-group"><label className="input-label">Gross Salary</label><input type="number" name="gross_salary" className="input-control" value={formData.gross_salary || ''} onChange={handleChange} disabled={!editMode} /></div>
+                       <div className="input-group"><label className="input-label">Gross Salary <span style={{color:'var(--danger)'}}>*</span></label><input type="number" name="gross_salary" className="input-control" value={formData.gross_salary || ''} onChange={handleChange} disabled={!editMode} /></div>
                        <div className="input-group"><label className="input-label">Basic Salary</label><input type="number" name="basic_salary" className="input-control" value={formData.basic_salary || ''} onChange={handleChange} disabled={!editMode} /></div>
                        <div className="input-group"><label className="input-label">HRA</label><input type="number" name="hra" className="input-control" value={formData.hra || ''} onChange={handleChange} disabled={!editMode} /></div>
                        <div className="input-group"><label className="input-label">Deductions</label><input type="number" name="deductions" className="input-control" value={formData.deductions || ''} onChange={handleChange} disabled={!editMode} /></div>
                      </div>
                    </div>
+
+                   {/* Bank Details */}
+                   <div className="card" style={{ marginBottom: '24px' }}>
+                     <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <Building2 size={16} color="var(--primary-color)" />
+                       <h3 className="card-title" style={{ margin: 0 }}>Bank Details</h3>
+                     </div>
+                     <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                       <div className="input-group">
+                         <label className="input-label">Bank Name <span style={{color:'var(--danger)'}}>*</span></label>
+                         <input type="text" name="bank_name" className="input-control" value={formData.bank_name || ''} onChange={handleChange} disabled={!editMode} placeholder="e.g. HDFC Bank" />
+                       </div>
+                       <div className="input-group">
+                         <label className="input-label">Account Number <span style={{color:'var(--danger)'}}>*</span></label>
+                         <input type="text" name="account_number" className="input-control" value={formData.account_number || ''} onChange={handleChange} disabled={!editMode} placeholder="e.g. 501002345678" />
+                       </div>
+                       <div className="input-group">
+                         <label className="input-label">IFSC Code <span style={{color:'var(--danger)'}}>*</span></label>
+                         <input
+                           type="text"
+                           name="ifsc_code"
+                           className="input-control"
+                           value={formData.ifsc_code || ''}
+                           onChange={editMode ? handleIFSCChange : undefined}
+                           disabled={!editMode}
+                           placeholder="e.g. HDFC0001234"
+                           maxLength={11}
+                           style={{ textTransform: 'uppercase', letterSpacing: '1px' }}
+                         />
+                         {editMode && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-formatted to UPPERCASE</span>}
+                       </div>
+                       <div className="input-group">
+                         <label className="input-label">UAN Number</label>
+                         <input type="text" name="uan_number" className="input-control" value={formData.uan_number || ''} onChange={handleChange} disabled={!editMode} placeholder="Universal Account Number" />
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Documents & Certificates Section */}
+               <div className="card" style={{ marginBottom: '24px' }}>
+                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                     <FileText size={16} color="var(--primary-color)" />
+                     <h3 className="card-title" style={{ margin: 0 }}>Documents &amp; Certificates</h3>
+                   </div>
+                   <div>
+                     <input type="file" id="profileDocUpload" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={handleProfileDocUpload} />
+                     <button type="button" className="btn btn-secondary" onClick={() => document.getElementById('profileDocUpload').click()} disabled={uploadingDoc} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '5px 12px' }}>
+                       <Plus size={14} /> {uploadingDoc ? 'Uploading...' : 'Upload Document'}
+                     </button>
+                   </div>
+                 </div>
+                 <div className="card-body">
+                   {(!formData.documents || formData.documents.length === 0) ? (
+                     <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, fontStyle: 'italic' }}>No documents uploaded. Click Upload Document to add.</p>
+                   ) : (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                       {(formData.documents || []).map((doc, idx) => (
+                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: 'var(--surface-hover)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                             <FileText size={16} color="var(--primary-color)" />
+                             <div>
+                               <div style={{ fontSize: '13px', fontWeight: 600 }}>{doc.title || doc.document_type}</div>
+                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{doc.document_type || 'Document'}</div>
+                             </div>
+                           </div>
+                           {doc.file_url && (
+                             <a href={getFileUrl(doc.file_url) ? `${getFileUrl(doc.file_url)}${getFileUrl(doc.file_url).includes("?") ? "&" : "?"}download=1` : "#"} target="_blank" rel="noopener noreferrer" download={doc.title || "document"} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '4px 10px', textDecoration: 'none', color: '#2563eb' }}>
+                               <Download size={13} /> Download
+                             </a>
+                           )}
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                   {employee.education && employee.education.length > 0 && (
+                     <div style={{ marginTop: '20px' }}>
+                       <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Education History &amp; Certificates</p>
+                       {employee.education.map((edu, idx) => (
+                         <div key={idx} style={{ padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                           <div>
+                             <strong style={{ fontSize: '13px' }}>{edu.level} — {edu.degree_name}</strong>
+                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{edu.university_name}{edu.passing_year ? ' (' + edu.passing_year + ')' : ''}</div>
+                           </div>
+                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                             {edu.edu_documents && edu.edu_documents.map((d, dIdx) => (
+                               <a key={dIdx} href={getFileUrl(d.file_url) ? `${getFileUrl(d.file_url)}${getFileUrl(d.file_url).includes("?") ? "&" : "?"}download=1` : "#"} target="_blank" rel="noopener noreferrer" download={d.title || "education_document"} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px', textDecoration: 'none', color: '#2563eb' }}>
+                                 <Download size={12} /> {d.title}
+                               </a>
+                             ))}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
                  </div>
                </div>
 
             {editMode && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginBottom: '24px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => { setEditMode(false); setFormData(employee); }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}><Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleResendInvite}
+                  disabled={resending}
+                  title="Dispatch fresh onboarding credentials to employee email"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#1d4ed8', borderColor: '#bfdbfe', backgroundColor: '#eff6ff' }}
+                >
+                  <Mail size={14} /> {resending ? 'Sending...' : 'Send Onboarding Email Again (hr.jattamkommerce@gmail.com)'}
+                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setEditMode(false); setFormData(employee); }}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}><Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}</button>
+                </div>
               </div>
             )}
          </form>

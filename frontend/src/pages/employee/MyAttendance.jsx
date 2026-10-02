@@ -10,9 +10,11 @@ import {
   TrendingUp,
   Download,
   Filter,
-  RefreshCw
+  RefreshCw,
+  QrCode
 } from 'lucide-react';
 import { employeePortalApi } from '../../services/employeePortalApi';
+import QrAttendanceScannerModal from '../../components/attendance/QrAttendanceScannerModal';
 
 const MyAttendance = () => {
   const [activeTab, setActiveTab] = useState('today');
@@ -20,6 +22,7 @@ const MyAttendance = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [showQrScanner, setShowQrScanner] = useState(false);
   
   const [todayData, setTodayData] = useState(null);
   const [records, setRecords] = useState([]);
@@ -110,7 +113,7 @@ const MyAttendance = () => {
     <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
+        <div className="desktop-only">
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
             My Attendance
           </h1>
@@ -192,6 +195,7 @@ const MyAttendance = () => {
           actionLoading={actionLoading}
           onCheckIn={handleCheckIn}
           onCheckOut={handleCheckOut}
+          onOpenQrScanner={() => setShowQrScanner(true)}
           calculateWorkingHours={calculateWorkingHours}
           formatShortTime={formatShortTime}
         />
@@ -214,12 +218,24 @@ const MyAttendance = () => {
           setFilters={setFilters}
         />
       )}
+
+      {/* Office QR Camera Scanner Modal */}
+      <QrAttendanceScannerModal
+        isOpen={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        isCheckedIn={(todayData?.status === 'checked_in' || todayData?.status === 'present') && !todayData?.check_out_time}
+        isCheckedOut={Boolean(todayData?.check_out_time)}
+        onSuccess={async () => {
+          await fetchAttendanceData();
+          setSuccessMsg('Attendance successfully recorded via Office QR!');
+        }}
+      />
     </div>
   );
 };
 
 // Tab 1: Today
-const TodayTab = ({ data, actionLoading, onCheckIn, onCheckOut, calculateWorkingHours, formatShortTime }) => {
+const TodayTab = ({ data, actionLoading, onCheckIn, onCheckOut, onOpenQrScanner, calculateWorkingHours, formatShortTime }) => {
   const isCheckedIn = (data?.status === 'checked_in' || data?.status === 'present') && !data?.check_out_time;
   const isCheckedOut = Boolean(data?.check_out_time);
 
@@ -248,7 +264,32 @@ const TodayTab = ({ data, actionLoading, onCheckIn, onCheckOut, calculateWorking
             </p>
           </div>
           
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {!isCheckedOut && (
+              <button 
+                type="button"
+                onClick={onOpenQrScanner}
+                disabled={actionLoading}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: '#eff6ff',
+                  color: '#2563eb',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 1px 3px rgba(37,99,235,0.1)'
+                }}
+              >
+                <QrCode size={18} />
+                <span>Scan Office QR</span>
+              </button>
+            )}
+
             {!isCheckedIn && !isCheckedOut && (
               <button 
                 onClick={onCheckIn}

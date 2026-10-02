@@ -11,6 +11,7 @@ class SocialService {
 
     const offset = Math.max(0, (parseInt(page, 10) - 1) * parseInt(limit, 10));
     const safeLimit = Math.min(50, Math.max(1, parseInt(limit, 10)));
+    const safeUserId = Number(userId) || 0;
 
     // Total count
     const [countRows] = await db.query(
@@ -50,7 +51,7 @@ class SocialService {
        WHERE p.organization_id = ? AND p.deleted_at IS NULL
        ORDER BY p.created_at DESC
        LIMIT ? OFFSET ?`,
-      [userId, organizationId, safeLimit, offset]
+      [safeUserId, organizationId, safeLimit, offset]
     );
 
     if (posts.length === 0) {
@@ -107,6 +108,7 @@ class SocialService {
    * Fetch single post by ID with security validation
    */
   async getPostById({ postId, organizationId, userId }) {
+    const safeUserId = Number(userId) || 0;
     const [posts] = await db.query(
       `SELECT 
         p.id,
@@ -133,7 +135,7 @@ class SocialService {
        LEFT JOIN designations des ON e.designation_id = des.id
        LEFT JOIN departments d ON e.department_id = d.id
        WHERE p.id = ? AND p.organization_id = ? AND p.deleted_at IS NULL`,
-      [userId, postId, organizationId]
+      [safeUserId, postId, organizationId]
     );
 
     if (posts.length === 0) {
@@ -161,8 +163,13 @@ class SocialService {
    * Create a new social post with optional media
    */
   async createPost({ organizationId, authorId, content, postType = 'standard', files = [] }) {
-    if (!content || !content.trim()) {
-      throw new Error('Post content is required');
+    const orgId = Number(organizationId) || 1;
+    const authId = Number(authorId);
+    const textContent = (content && typeof content === 'string') ? content.trim() : '';
+    const hasFiles = files && files.length > 0;
+
+    if (!textContent && !hasFiles) {
+      throw new Error('Post content or media is required');
     }
 
     const validTypes = ['standard', 'milestone', 'celebration', 'achievement', 'announcement'];
@@ -171,24 +178,24 @@ class SocialService {
     const [insertResult] = await db.query(
       `INSERT INTO social_posts (organization_id, author_id, content, post_type)
        VALUES (?, ?, ?, ?)`,
-      [organizationId, authorId, content.trim(), safeType]
+      [orgId, authId, textContent, safeType]
     );
 
     const postId = insertResult.insertId;
 
-    if (files && files.length > 0) {
+    if (hasFiles) {
       for (const file of files) {
         // Save relative path for static serving
         const mediaUrl = `uploads/social/${file.filename}`;
         await db.query(
           `INSERT INTO social_post_media (organization_id, post_id, media_url, media_type, file_name, file_size, mime_type)
            VALUES (?, ?, ?, 'image', ?, ?, ?)`,
-          [organizationId, postId, mediaUrl, file.originalname, file.size, file.mimetype]
+          [orgId, postId, mediaUrl, file.originalname || file.filename, file.size || 0, file.mimetype || 'image/jpeg']
         );
       }
     }
 
-    return await this.getPostById({ postId, organizationId, userId: authorId });
+    return await this.getPostById({ postId, organizationId: orgId, userId: authId });
   }
 
   /**

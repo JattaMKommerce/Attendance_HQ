@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   UserX, Plus, Search, X, CheckCircle, CheckCircle2,
   Circle, Clock, AlertCircle, ChevronRight, ChevronLeft,
   FileText, Shield, Package, IndianRupee, Mail, Briefcase,
-  Award, Users, Calendar, Trash2, RotateCcw
+  Award, Users, Calendar, Trash2, RotateCcw, ArrowLeft
 } from 'lucide-react';
+import { getEmployees } from '../../services/employeeApi';
 
 // ── Offboarding checklist template ────────────────────────────────────────
 const CHECKLIST_TEMPLATE = [
@@ -63,8 +65,11 @@ function Toast({ msg, onClose }) {
   );
 }
 
-// ── Add Offboarding Modal ──────────────────────────────────────────────────
+// ── Add Offboarding Modal — with real employee picker ──────────────────────
 function AddOffboardingModal({ onSave, onClose }) {
+  const [employees, setEmployees] = useState([]);
+  const [empSearch, setEmpSearch] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
   const [form, setForm] = useState({
     employeeName: '', employeeId: '', department: '', designation: '',
     type: 'Resignation', reason: 'Personal reasons',
@@ -75,8 +80,30 @@ function AddOffboardingModal({ onSave, onClose }) {
   const ls  = { fontSize:'13px', fontWeight:600, color:'#374151', marginBottom:'6px', display:'block' };
   const is  = { width:'100%', boxSizing:'border-box', padding:'9px 12px', border:'1px solid #d1d5db', borderRadius:'6px', fontSize:'13px', outline:'none', fontFamily:'inherit' };
 
+  useEffect(() => {
+    getEmployees({ status: 'active' }).then(res => {
+      if (res.success) setEmployees(res.data.employees || []);
+    }).catch(() => {});
+  }, []);
+
+  const filteredEmps = employees.filter(e => {
+    const q = empSearch.toLowerCase();
+    return !q || `${e.first_name} ${e.last_name}`.toLowerCase().includes(q)
+      || (e.employee_code || '').toLowerCase().includes(q)
+      || (e.department_name || '').toLowerCase().includes(q);
+  });
+
+  const selectEmployee = (emp) => {
+    set('employeeName', `${emp.first_name} ${emp.last_name}`);
+    set('employeeId', emp.employee_code || String(emp.id));
+    set('department', emp.department_name || '');
+    set('designation', emp.designation_name || '');
+    setShowPicker(false);
+    setEmpSearch('');
+  };
+
   const handleSave = () => {
-    if (!form.employeeName.trim()) { alert('Employee name is required.'); return; }
+    if (!form.employeeName.trim()) { alert('Please select an employee first.'); return; }
     if (!form.lastWorkingDate)     { alert('Last working date is required.'); return; }
     onSave(form);
   };
@@ -89,14 +116,64 @@ function AddOffboardingModal({ onSave, onClose }) {
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'#6b7280' }}><X size={20} /></button>
         </div>
         <div style={{ padding:'24px', display:'grid', gap:'16px' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-            <div><label style={ls}>Employee Name *</label><input style={is} placeholder="Full name" value={form.employeeName} onChange={e => set('employeeName', e.target.value)} /></div>
-            <div><label style={ls}>Employee ID</label><input style={is} placeholder="e.g. EMP001" value={form.employeeId} onChange={e => set('employeeId', e.target.value)} /></div>
+
+          {/* ── Employee Picker ── */}
+          <div>
+            <label style={ls}>Select Employee *</label>
+            {form.employeeName ? (
+              <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 14px', border:'1.5px solid #2563eb', borderRadius:'8px', background:'#eff6ff' }}>
+                <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#fee2e2', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, color:'#ef4444', fontSize:'15px', flexShrink:0 }}>
+                  {form.employeeName.charAt(0)}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:600, color:'#0f172a', fontSize:'14px' }}>{form.employeeName}</div>
+                  <div style={{ fontSize:'12px', color:'#64748b' }}>{form.employeeId} {form.department ? `· ${form.department}` : ''} {form.designation ? `· ${form.designation}` : ''}</div>
+                </div>
+                <button onClick={() => { set('employeeName',''); set('employeeId',''); set('department',''); set('designation',''); setShowPicker(true); }}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#6b7280', fontSize:'12px', fontWeight:600 }}>Change</button>
+              </div>
+            ) : (
+              <div style={{ position:'relative' }}>
+                <button onClick={() => setShowPicker(p => !p)}
+                  style={{ ...is, textAlign:'left', cursor:'pointer', color: '#64748b', display:'flex', alignItems:'center', gap:'8px' }}>
+                  <Users size={16} /> {employees.length > 0 ? 'Click to select employee…' : 'Loading employees…'}
+                </button>
+              </div>
+            )}
+            {/* Dropdown picker */}
+            {showPicker && (
+              <div style={{ border:'1px solid #d1d5db', borderRadius:'8px', marginTop:'6px', overflow:'hidden', boxShadow:'0 4px 16px rgba(0,0,0,0.12)', background:'#fff' }}>
+                <div style={{ padding:'10px 12px', borderBottom:'1px solid #e5e7eb', position:'relative' }}>
+                  <Search size={14} style={{ position:'absolute', left:'22px', top:'50%', transform:'translateY(-50%)', color:'#9ca3af' }} />
+                  <input autoFocus value={empSearch} onChange={e => setEmpSearch(e.target.value)}
+                    placeholder="Search by name, code or department…"
+                    style={{ ...is, paddingLeft:'32px', marginBottom:0, border:'1px solid #e5e7eb' }} />
+                </div>
+                <div style={{ maxHeight:'200px', overflowY:'auto' }}>
+                  {filteredEmps.length === 0 ? (
+                    <div style={{ padding:'20px', textAlign:'center', color:'#9ca3af', fontSize:'13px' }}>
+                      {employees.length === 0 ? 'Loading…' : 'No employees found'}
+                    </div>
+                  ) : filteredEmps.map(emp => (
+                    <div key={emp.id} onClick={() => selectEmployee(emp)}
+                      style={{ padding:'10px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:'10px', borderBottom:'1px solid #f3f4f6' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+                      <div style={{ width:'30px', height:'30px', borderRadius:'50%', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, color:'#2563eb', fontSize:'13px', flexShrink:0 }}>
+                        {emp.first_name.charAt(0)}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight:600, fontSize:'13px', color:'#0f172a' }}>{emp.first_name} {emp.last_name}</div>
+                        <div style={{ fontSize:'11px', color:'#64748b' }}>{emp.employee_code} · {emp.department_name || 'No Dept'} · {emp.designation_name || 'No Designation'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
-            <div><label style={ls}>Department</label><input style={is} placeholder="e.g. Engineering" value={form.department} onChange={e => set('department', e.target.value)} /></div>
-            <div><label style={ls}>Designation</label><input style={is} placeholder="e.g. Senior Developer" value={form.designation} onChange={e => set('designation', e.target.value)} /></div>
-          </div>
+
+          {/* Type & Reason */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             <div>
               <label style={ls}>Offboarding Type</label>
@@ -111,6 +188,7 @@ function AddOffboardingModal({ onSave, onClose }) {
               </select>
             </div>
           </div>
+          {/* Dates */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             <div><label style={ls}>Notice Date</label><input type="date" style={is} value={form.noticeDate} onChange={e => set('noticeDate', e.target.value)} /></div>
             <div><label style={ls}>Last Working Date *</label><input type="date" style={is} value={form.lastWorkingDate} onChange={e => set('lastWorkingDate', e.target.value)} /></div>
@@ -224,6 +302,7 @@ function ChecklistPanel({ record, onUpdate, onClose }) {
 
 // ── Main Offboarding page ──────────────────────────────────────────────────
 export default function Offboarding() {
+  const navigate = useNavigate();
   const [records,     setRecords]     = useState(() => { const d = load(); nextId = d.length + 1; return d; });
   const [search,      setSearch]      = useState('');
   const [typeFilter,  setTypeFilter]  = useState('All');
@@ -275,8 +354,14 @@ export default function Offboarding() {
       {showAddModal && <AddOffboardingModal onSave={handleAdd} onClose={() => setShowAddModal(false)} />}
       {activeRecord  && <ChecklistPanel record={activeRecord} onUpdate={handleUpdate} onClose={() => setActiveRecord(null)} />}
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'16px' }}>
+      {/* ── Page Header with back button ── */}
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'8px' }}>
+        <button onClick={() => navigate(-1)}
+          style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'8px 14px', border:'1px solid #e5e7eb', borderRadius:'8px', background:'#fff', cursor:'pointer', fontSize:'13px', fontWeight:600, color:'#374151' }}>
+          <ArrowLeft size={16} /> Back
+        </button>
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', paddingBottom:'18px', borderBottom:'1.5px solid #e2e8f0', flexWrap:'wrap', gap:'16px' }}>
         <div>
           <h1 style={{ margin:'0 0 4px', fontSize:'24px', fontWeight:800, color:'#0f172a', display:'flex', alignItems:'center', gap:'10px' }}>
             <UserX size={26} color="#ef4444" /> Offboarding

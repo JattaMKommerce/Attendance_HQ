@@ -3,12 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Calendar, Search, AlertCircle, Clock, CheckSquare, 
   Users, CheckCircle, XCircle, Download, 
-  Eye, Filter, X
+  Eye, Filter, X, QrCode, ArrowLeft
 } from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
 import api from '../../services/api';
 import AttendanceEmployeeDashboard from './AttendanceEmployeeDashboard';
 import AttendanceIssuesView from './AttendanceIssuesView';
+import OfficeQrModal from '../../components/attendance/OfficeQrModal';
 import './AttendanceDashboard.css';
 import './Attendance.css';
 
@@ -49,6 +50,7 @@ const AttendanceOverview = () => {
   // Modals state
   const [activeModal, setActiveModal] = useState(null); // 'missing_checkout', 'correction', 'unapproved_absence'
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const exportToCSV = () => {
     if (tableData.length === 0) return;
@@ -191,9 +193,17 @@ const AttendanceOverview = () => {
     <div className="attendance-dashboard">
       
       {/* Top Header */}
-      <div className="att-header">
-        <div>
-          <h1 className="att-title">Attendance</h1>
+      <div className="att-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <h1 className="att-title" style={{ margin: 0 }}>Attendance</h1>
         </div>
         <div className="att-header-actions">
           <div className="att-date-picker">
@@ -204,6 +214,28 @@ const AttendanceOverview = () => {
               className="att-date-input"
             />
           </div>
+          <button 
+            type="button"
+            className="att-qr-btn"
+            onClick={() => setShowQrModal(true)}
+            title="Generate and Print Official Office Attendance QR Standee"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '13.5px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            <QrCode size={16} color="#2563eb" />
+            <span>Office QR Standee</span>
+          </button>
           <button className="att-export-btn" onClick={exportToCSV}>
             <Download size={16} />
             Export Report
@@ -440,6 +472,12 @@ const AttendanceOverview = () => {
           </table>
         </div>
       </div>
+
+      {/* Office Static Attendance QR Code Standee Modal */}
+      <OfficeQrModal 
+        isOpen={showQrModal} 
+        onClose={() => setShowQrModal(false)} 
+      />
     </div>
   );
 };

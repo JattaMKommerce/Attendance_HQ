@@ -8,6 +8,12 @@ import { initMobileApp } from './services/mobileInit';
 // Initialize native mobile app wrapper if running inside Capacitor
 initMobileApp();
 
+// Automatically reload page if browser tries to load a stale JS/CSS chunk hash
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

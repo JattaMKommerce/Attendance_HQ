@@ -12,6 +12,7 @@ router.get('/posts', socialController.getPosts);
 router.post('/posts', (req, res, next) => {
   upload.social.array('media', 5)(req, res, (err) => {
     if (err) {
+      console.error('[Social Upload Error]:', err.message);
       return res.status(400).json({ success: false, message: err.message });
     }
     next();

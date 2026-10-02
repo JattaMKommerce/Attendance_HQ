@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Search, Plus, X, ArrowRight, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Layers, Search, Plus, X, ArrowRight, CheckCircle, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { fetchLifecycleContext } from './lifecycleHelper';
+import EmployeePicker from '../../components/common/EmployeePicker';
 
-const INITIAL_ACTIONS_DATA = [
-  { id: 'EMP002', name: 'Rahul Sharma', department: 'IT', type: 'Promotion', current: 'Software Engineer', proposed: 'Senior Software Engineer', effective: '2025-10-01', status: 'Pending Approval', reason: 'Consistently exceeded sprint velocity and demonstrated senior design leadership.' },
-  { id: 'EMP007', name: 'Priya Patel', department: 'Human Resources', type: 'Transfer', current: 'Human Resources', proposed: 'Operations', effective: '2025-09-15', status: 'Approved', reason: 'Internal transfer to strengthen operations workflow team.' },
-  { id: 'EMP011', name: 'Amit Kumar', department: 'Operations', type: 'Salary Revision', current: '₹6,00,000', proposed: '₹7,20,000', effective: '2025-10-01', status: 'Pending Approval', reason: 'Annual compensation appraisal adjustment based on stellar review.' },
-];
+const INITIAL_ACTIONS_DATA = [];
 
 export default function EmployeeActions() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [tableData, setTableData] = useState(INITIAL_ACTIONS_DATA);
   const [selectedEmp, setSelectedEmp] = useState(null);
+  const [selectedEmployeeObj, setSelectedEmployeeObj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -49,53 +49,56 @@ export default function EmployeeActions() {
   }, []);
 
   const handleOpenModal = () => {
-    const initialDept = departments[0] || 'IT';
-    const firstEmp = employees.find(e => e.department === initialDept) || employees[0];
-
+    setSelectedEmployeeObj(null);
     setFormData({
-      department: initialDept,
-      employeeId: firstEmp ? firstEmp.id : '',
+      department: '',
+      employeeId: '',
       type: 'Promotion',
-      current: firstEmp ? firstEmp.designation : 'Software Engineer',
-      proposed: 'Senior ' + (firstEmp ? firstEmp.designation : 'Specialist'),
-      effective: '2025-10-01',
+      current: '',
+      proposed: '',
+      effective: new Date().toISOString().split('T')[0],
       reason: 'Recognized for outstanding delivery and leadership qualities.'
     });
     setShowModal(true);
   };
 
-  const handleDepartmentChange = (dept) => {
-    const filteredEmps = employees.filter(e => e.department === dept);
-    const matchedEmp = filteredEmps[0] || employees[0];
-    setFormData(prev => ({
-      ...prev,
-      department: dept,
-      employeeId: matchedEmp ? matchedEmp.id : '',
-      current: getCurrentValue(prev.type, matchedEmp)
-    }));
-  };
-
-  const handleEmployeeChange = (empId) => {
-    const emp = employees.find(e => e.id.toString() === empId.toString());
+  const handlePickerChange = (emp) => {
+    setSelectedEmployeeObj(emp);
     if (emp) {
+      const cur = getCurrentValue(formData.type, emp);
+      let defaultProposed = '';
+      if (formData.type === 'Promotion') defaultProposed = `Senior ${emp.designation || 'Lead'}`;
+      else if (formData.type === 'Transfer') defaultProposed = 'Operations';
+      else if (formData.type === 'Salary Revision') defaultProposed = emp.gross_salary ? `₹${(Number(emp.gross_salary) * 1.15).toFixed(0)}` : '₹7,50,000';
+      else if (formData.type === 'Role Change') defaultProposed = 'Lead ' + (emp.designation || 'Specialist');
+
       setFormData(prev => ({
         ...prev,
         employeeId: emp.id,
-        department: emp.department || prev.department,
-        current: getCurrentValue(prev.type, emp)
+        department: emp.department || '',
+        current: cur,
+        proposed: defaultProposed
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        employeeId: '',
+        department: '',
+        current: '',
+        proposed: ''
       }));
     }
   };
 
   const handleTypeChange = (type) => {
-    const emp = employees.find(e => e.id.toString() === formData.employeeId.toString()) || employees[0];
+    const emp = selectedEmployeeObj;
     let currentVal = getCurrentValue(type, emp);
     let defaultProposed = '';
 
     if (type === 'Promotion') defaultProposed = `Senior ${emp?.designation || 'Lead'}`;
     else if (type === 'Transfer') defaultProposed = 'Operations';
-    else if (type === 'Salary Revision') defaultProposed = '₹7,50,000';
-    else if (type === 'Role Change') defaultProposed = 'Product Manager';
+    else if (type === 'Salary Revision') defaultProposed = emp?.gross_salary ? `₹${(Number(emp.gross_salary) * 1.15).toFixed(0)}` : '₹7,50,000';
+    else if (type === 'Role Change') defaultProposed = 'Lead ' + (emp?.designation || 'Specialist');
 
     setFormData(prev => ({
       ...prev,
@@ -109,22 +112,26 @@ export default function EmployeeActions() {
     if (!emp) return '';
     if (type === 'Promotion' || type === 'Role Change') return emp.designation || 'Associate';
     if (type === 'Transfer') return emp.department || 'Operations';
-    if (type === 'Salary Revision') return emp.gross_salary || '₹6,00,000';
-    return emp.designation;
+    if (type === 'Salary Revision') return emp.gross_salary ? `₹${Number(emp.gross_salary).toLocaleString('en-IN')}` : '₹6,00,000';
+    return emp.designation || '';
   };
 
   const handleInitiate = (e) => {
     e.preventDefault();
-    const emp = employees.find(e => e.id.toString() === formData.employeeId.toString());
-    const empName = emp ? emp.name : (formData.employeeId || 'Employee');
-    const empCode = emp?.employee_code || formData.employeeId || `EMP${Math.floor(100 + Math.random() * 900)}`;
+    if (!selectedEmployeeObj && !formData.employeeId) {
+      alert('Please select an active employee first.');
+      return;
+    }
+    const emp = selectedEmployeeObj;
+    const empName = emp ? emp.name : 'Employee';
+    const empCode = emp?.employee_code || `EMP${emp?.id || Math.floor(100 + Math.random() * 900)}`;
 
     const newRecord = {
       id: empCode,
       name: empName,
-      department: formData.department || emp?.department || 'Operations',
+      department: emp?.department || formData.department || 'Operations',
       type: formData.type,
-      current: formData.current,
+      current: formData.current || (emp?.designation || 'Associate'),
       proposed: formData.proposed,
       effective: formData.effective,
       status: 'Pending Approval',
@@ -186,8 +193,16 @@ export default function EmployeeActions() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={24} color="#10b981" /> Employee Actions
           </h1>
@@ -305,36 +320,16 @@ export default function EmployeeActions() {
             </div>
 
             <form onSubmit={handleInitiate} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <EmployeePicker 
+                  label="Select Active Employee *" 
+                  required 
+                  value={selectedEmployeeObj} 
+                  onChange={handlePickerChange} 
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Department</label>
-                  <select 
-                    required 
-                    value={formData.department} 
-                    onChange={(e) => handleDepartmentChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Employee</label>
-                  <select 
-                    required 
-                    value={formData.employeeId} 
-                    onChange={(e) => handleEmployeeChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Employee</option>
-                    {employees
-                      .filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase())
-                      .map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)}
-                    {employees.filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase()).length === 0 &&
-                      employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)
-                    }
-                  </select>
-                </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Action Type</label>
                   <select 

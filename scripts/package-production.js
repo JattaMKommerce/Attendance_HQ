@@ -73,6 +73,10 @@ try {
     path.join(backendDir, 'database', 'schema', 'production_baseline.sql'),
     path.join(dbSchemaDir, 'production_baseline.sql')
   );
+  const cleanSqlSrc = path.join(rootDir, 'scripts', 'clean-test-data-safe.sql');
+  if (fs.existsSync(cleanSqlSrc)) {
+    fs.copyFileSync(cleanSqlSrc, path.join(dbSchemaDir, 'clean-test-data-safe.sql'));
+  }
 
   // Copy root entry points & config
   const filesToCopy = [
@@ -80,6 +84,7 @@ try {
     'package-lock.json',
     'app.js',
     'index.js',
+    'server.js',
     '.env.example'
   ];
   for (const f of filesToCopy) {
@@ -89,18 +94,22 @@ try {
     }
   }
 
-  // Also copy frontend dist into backend/public so backend can serve unified SPA
+  // Create minimal backend/public directory for health checks & static fallback (excluding heavy APK & video assets)
   const publicDest = path.join(backendStaging, 'public');
   fs.mkdirSync(publicDest, { recursive: true });
-  execSync(`cp -R "${distDir}/"* "${publicDest}/"`);
+  if (fs.existsSync(path.join(distDir, 'index.html'))) {
+    fs.copyFileSync(path.join(distDir, 'index.html'), path.join(publicDest, 'index.html'));
+  }
   if (fs.existsSync(htaccessDest)) {
     fs.copyFileSync(htaccessDest, path.join(publicDest, '.htaccess'));
   }
 
-  // Create uploads directory with .gitkeep
+  // Create uploads directories with subfolders and .gitkeep
   const uploadsDest = path.join(backendStaging, 'uploads');
-  fs.mkdirSync(uploadsDest, { recursive: true });
-  fs.writeFileSync(path.join(uploadsDest, '.gitkeep'), '');
+  ['photos', 'documents', 'social'].forEach(sub => {
+    fs.mkdirSync(path.join(uploadsDest, sub), { recursive: true });
+    fs.writeFileSync(path.join(uploadsDest, sub, '.gitkeep'), '');
+  });
 
   // 5. Package Backend ZIP
   console.log('\n5. Packaging hrms-backend.zip...');

@@ -97,12 +97,15 @@ class PayrollController {
         return res.status(400).json({ success: false, message: 'Month and Year are required' });
       }
 
-      // 1. Fetch all active employees and their salaries
+      // 1. Fetch all active employees, their salaries and monthly paid leave quota
       const query = `
         SELECT 
-          u.id as user_id, u.first_name, u.last_name, e.employee_code as employee_id, d.name as department, deg.name as designation,
-          COALESCE(es.ctc, 0) as ctc, COALESCE(es.base_salary, 0) as base_salary,
-          COALESCE(es.bank_verification_status, 'Pending') as bank_verification_status
+          u.id as user_id, u.first_name, u.last_name, e.id as employee_db_id, e.employee_code as employee_id, d.name as department, deg.name as designation,
+          COALESCE(NULLIF(e.gross_salary, 0), NULLIF(es.ctc / 12, 0), es.ctc, 0) as gross_salary,
+          COALESCE(NULLIF(e.basic_salary, 0), es.base_salary, 0) as base_salary,
+          COALESCE(e.deductions, 0) as other_deductions,
+          COALESCE(e.monthly_paid_leaves, 1) as monthly_paid_leaves,
+          COALESCE(es.bank_verification_status, 'Verified') as bank_verification_status
         FROM users u
         LEFT JOIN employees e ON u.id = e.user_id
         LEFT JOIN departments d ON e.department_id = d.id
@@ -123,51 +126,79 @@ class PayrollController {
       }
 
       const totalDaysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+      const targetMonthNum = monthIndex + 1;
 
-      // 3. Fetch unpaid leaves for all employees for this month
-      // This query assumes leave_requests has start_date and end_date and status = 'APPROVED'
-      // To properly calculate exact days falling in this month is complex in SQL, we'll do a simplified approach
-      // For now, if a leave starts in this month, we take its duration.
-      // (A robust system handles date overlapping)
-      
-      const [unpaidLeaves] = await db.query(`
-        SELECT user_id, SUM(DATEDIFF(end_date, start_date) + 1) as total_unpaid_days
+      // 3. Fetch approved leaves for all employees for this month
+      const [leaveRows] = await db.query(`
+        SELECT employee_id, user_id, SUM(total_days) as total_leaves
         FROM leave_requests
         WHERE organization_id = ? 
-        AND status = 'APPROVED' 
-        AND leave_type_id IN (SELECT id FROM leave_types WHERE name = 'Unpaid Leave')
-        AND MONTH(start_date) = ? AND YEAR(start_date) = ?
-        GROUP BY user_id
-      `, [organizationId, monthIndex + 1, year]);
+          AND status = 'approved'
+          AND MONTH(start_date) = ? AND YEAR(start_date) = ?
+        GROUP BY employee_id, user_id
+      `, [organizationId, targetMonthNum, year]);
 
-      const unpaidMap = {};
-      unpaidLeaves.forEach(l => {
-        unpaidMap[l.user_id] = l.total_unpaid_days;
+      const leaveMap = {};
+      leaveRows.forEach(l => {
+        if (l.employee_id) leaveMap[`emp_${l.employee_id}`] = parseFloat(l.total_leaves) || 0;
+        if (l.user_id) leaveMap[`user_${l.user_id}`] = parseFloat(l.total_leaves) || 0;
       });
 
-      // 4. Calculate for each employee
-      const previewData = employees.map(emp => {
-        const ctc = parseFloat(emp.ctc);
-        const monthlyGross = ctc / 12; // Standard CTC/12 assumption
-        
-        const unpaidDays = unpaidMap[emp.user_id] || 0;
-        const payableDays = Math.max(0, totalDaysInMonth - unpaidDays);
-        
-        // Loss of Pay calculation
-        const perDayGross = monthlyGross / totalDaysInMonth;
-        let lopAmount = unpaidDays * perDayGross;
+      // 4. Fetch absent marks from attendance_records for this month
+      const [absentRows] = await db.query(`
+        SELECT employee_id, COUNT(*) as absent_count
+        FROM attendance_records
+        WHERE organization_id = ?
+          AND status = 'absent'
+          AND MONTH(date) = ? AND YEAR(date) = ?
+        GROUP BY employee_id
+      `, [organizationId, targetMonthNum, year]);
 
-        // Basic Statutory Deductions (Simplified example)
-        let pfDeduction = 0;
-        if (monthlyGross > 0) {
-          // Standard PF is 12% of Basic, capping Basic at 15000 for PF calculation (simplified)
-          let basic = emp.base_salary > 0 ? parseFloat(emp.base_salary) : monthlyGross * 0.5;
-          let pfBasic = Math.min(basic, 15000);
-          pfDeduction = pfBasic * 0.12;
+      const attendanceAbsentMap = {};
+      absentRows.forEach(a => {
+        attendanceAbsentMap[a.employee_id] = parseInt(a.absent_count, 10) || 0;
+      });
+
+      // 5. Calculate salary, company 1-paid-leave quota, and excess absence LOP deduction
+      const previewData = employees.map(emp => {
+        const monthlyGross = parseFloat(emp.gross_salary) || 0;
+        const perDayGross = totalDaysInMonth > 0 ? (monthlyGross / totalDaysInMonth) : 0;
+        
+        // Sum total absence days from attendance records and approved leaves
+        const leavesTaken = leaveMap[`emp_${emp.employee_db_id}`] || leaveMap[`user_${emp.user_id}`] || 0;
+        const attendanceAbsents = attendanceAbsentMap[emp.employee_db_id] || 0;
+        // Total time-off is the combined or maximum of recorded absences
+        const totalAbsenceDays = Math.max(leavesTaken, attendanceAbsents);
+
+        // Company policy: 1 Paid Leave allowed per month (default 1)
+        const paidQuota = emp.monthly_paid_leaves !== null ? parseInt(emp.monthly_paid_leaves, 10) : 1;
+        
+        let paidLeavesUsed = 0;
+        let unpaidDays = 0;
+        
+        if (totalAbsenceDays <= paidQuota) {
+          paidLeavesUsed = totalAbsenceDays;
+          unpaidDays = 0;
+        } else {
+          paidLeavesUsed = paidQuota;
+          unpaidDays = totalAbsenceDays - paidQuota;
         }
 
-        let totalDeductions = lopAmount + pfDeduction;
-        let netPay = monthlyGross - totalDeductions;
+        const payableDays = Math.max(0, totalDaysInMonth - unpaidDays);
+        
+        // Loss of Pay (LOP) amount for unpaid days
+        const lopAmount = Math.round(unpaidDays * perDayGross);
+
+        // Standard PF or statutory deductions (if applicable)
+        let pfDeduction = 0;
+        if (monthlyGross > 0 && emp.base_salary > 0) {
+          const pfBasic = Math.min(parseFloat(emp.base_salary), 15000);
+          pfDeduction = Math.round(pfBasic * 0.12);
+        }
+
+        const otherDeductions = parseFloat(emp.other_deductions) || 0;
+        const totalDeductions = lopAmount + pfDeduction + otherDeductions;
+        const netPay = Math.max(0, Math.round(monthlyGross - totalDeductions));
 
         return {
           user_id: emp.user_id,
@@ -179,13 +210,20 @@ class PayrollController {
           monthlyGross: monthlyGross,
           payableDays: payableDays,
           unpaidDays: unpaidDays,
+          paidLeavesAllowed: paidQuota,
+          paidLeavesUsed: paidLeavesUsed,
+          absentDays: totalAbsenceDays,
           deductions: totalDeductions,
           netPay: netPay,
           breakdown: {
-            basic: emp.base_salary > 0 ? emp.base_salary : monthlyGross * 0.5,
-            hra: monthlyGross * 0.2, // example structure
+            basic: emp.base_salary > 0 ? parseFloat(emp.base_salary) : Math.round(monthlyGross * 0.5),
+            hra: Math.round(monthlyGross * 0.2),
             lop: lopAmount,
-            pf: pfDeduction
+            pf: pfDeduction,
+            other: otherDeductions,
+            paidLeaveCoveredDays: paidLeavesUsed,
+            unpaidDeductedDays: unpaidDays,
+            dailyRate: Math.round(perDayGross)
           },
           status: emp.bank_verification_status === 'Verified' ? 'Ready' : 'Review'
         };

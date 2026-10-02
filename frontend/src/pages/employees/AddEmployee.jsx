@@ -56,7 +56,7 @@ const AddEmployee = () => {
   const [copiedDownload, setCopiedDownload] = useState(false);
 
   const defaultSalary = { gross_salary: '', basic_salary: '', hra: '', special_allowance: '', deductions: '', esi_percentage: '0.75', pf_percentage: '12.00', monthly_paid_leaves: '2', other_allowance: '', professional_tax: '', advances: '', incentives: '' };
-  const defaultBank = { bank_name: '', account_number: '', ifsc_code: '' };
+  const defaultBank = { bank_name: '', account_number: '', ifsc_code: '', bank_documents: [] };
 
   const defaultFormData = {
     first_name: '', last_name: '', email: '', phone: '',
@@ -163,7 +163,60 @@ const AddEmployee = () => {
     try {
       const res = await uploadDocument(file);
       if (res.success) addArrayItem('documents', { title: res.data.original_name, document_type: 'other', file_url: res.data.file_url });
-    } catch (err) { setError(err.response?.data?.message || 'Document upload failed'); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.statusText || err.message || 'Upload failed';
+      setError(`Document upload failed: ${msg}`);
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Upload a document for a specific education entry
+  const handleEduDocUpload = async (e, eduIdx) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const res = await uploadDocument(file);
+      if (res.success) {
+        setFormData(prev => {
+          const arr = [...prev.education];
+          arr[eduIdx] = {
+            ...arr[eduIdx],
+            edu_documents: [...(arr[eduIdx].edu_documents || []), { title: res.data.original_name, file_url: res.data.file_url }]
+          };
+          return { ...prev, education: arr };
+        });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.statusText || err.message || 'Upload failed';
+      setError(`Education document upload failed: ${msg}`);
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Upload a document for bank details
+  const handleBankDocUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const res = await uploadDocument(file);
+      if (res.success) {
+        setFormData(prev => ({
+          ...prev,
+          bank_documents: [...(prev.bank_documents || []), { title: res.data.original_name, file_url: res.data.file_url }]
+        }));
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.statusText || err.message || 'Upload failed';
+      setError(`Bank document upload failed: ${msg}`);
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Auto-uppercase IFSC code
+  const handleIFSCChange = (e) => {
+    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    setFormData(prev => ({ ...prev, ifsc_code: val }));
   };
 
   const netSalary = () => {
@@ -180,6 +233,43 @@ const AddEmployee = () => {
     setLoadingAction(sendEmail ? 'email' : 'save');
     setError(null);
 
+    // Mandatory field validation
+    if (!formData.first_name?.trim()) {
+      setError('First Name is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.last_name?.trim()) {
+      setError('Last Name is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.email?.trim()) {
+      setError('Official Email is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.phone?.trim()) {
+      setError('Phone number is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!/^[6-9]\d{9}$/.test(formData.phone.replace(/\s/g, ''))) {
+      setError('Please enter a valid 10-digit Indian mobile number.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.joining_date) {
+      setError('Joining Date is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.department_id) {
+      setError('Department is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (!formData.gross_salary) {
+      setError('Gross Salary (or Stipend) is required.');
+      setLoading(false); setLoadingAction(null); return;
+    }
+    if (formData.ifsc_code && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifsc_code)) {
+      setError('IFSC Code format is invalid. It should be like HDFC0001234 (4 letters, 0, 6 alphanumeric).');
+      setLoading(false); setLoadingAction(null); return;
+    }
     if (!formData.terms_accepted) {
       setError('You must accept the terms and conditions.');
       setLoading(false);
@@ -403,7 +493,7 @@ const AddEmployee = () => {
               {createdSuccess.email_status === 'SENT' ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontSize: '14px', fontWeight: 600 }}>
                   <CheckCircle size={18} />
-                  <span>Onboarding email with login credentials sent successfully to {createdSuccess.email}.</span>
+                  <span>Onboarding email with login credentials sent successfully to {createdSuccess.email} from hr.jattamkommerce@gmail.com.</span>
                 </div>
               ) : createdSuccess.email_status === 'SAVED_NO_EMAIL' ? (
                 <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
@@ -714,6 +804,15 @@ const AddEmployee = () => {
 
             <button
               type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate('/app/employees')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              View All Employees
+            </button>
+
+            <button
+              type="button"
               className="btn btn-primary"
               onClick={() => navigate(`/app/employees/${createdSuccess.id}`)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
@@ -746,10 +845,10 @@ const AddEmployee = () => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header"><h3 className="card-title">Personal Information</h3></div>
           <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="input-group"><label className="input-label">First Name *</label><input type="text" name="first_name" className="input-control" value={formData.first_name} onChange={handleChange} required /></div>
-            <div className="input-group"><label className="input-label">Last Name *</label><input type="text" name="last_name" className="input-control" value={formData.last_name} onChange={handleChange} required /></div>
-            <div className="input-group"><label className="input-label">Email *</label><input type="email" name="email" className="input-control" value={formData.email} onChange={handleChange} required /></div>
-            <div className="input-group"><label className="input-label">Phone</label><input type="text" name="phone" className="input-control" value={formData.phone} onChange={handleChange} /></div>
+            <div className="input-group"><label className="input-label">First Name <span style={{color:'var(--danger)'}}>*</span></label><input type="text" name="first_name" className="input-control" value={formData.first_name} onChange={handleChange} required placeholder="e.g. Ravi" /></div>
+            <div className="input-group"><label className="input-label">Last Name <span style={{color:'var(--danger)'}}>*</span></label><input type="text" name="last_name" className="input-control" value={formData.last_name} onChange={handleChange} required placeholder="e.g. Sharma" /></div>
+            <div className="input-group"><label className="input-label">Official Email <span style={{color:'var(--danger)'}}>*</span></label><input type="email" name="email" className="input-control" value={formData.email} onChange={handleChange} required placeholder="employee@company.com" /></div>
+            <div className="input-group"><label className="input-label">Phone <span style={{color:'var(--danger)'}}>*</span></label><input type="tel" name="phone" className="input-control" value={formData.phone} onChange={handleChange} placeholder="10-digit mobile number" maxLength={10} /></div>
             <div className="input-group">
               <label className="input-label">
                 Initial Temporary Password <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional - leave blank to auto-generate)</span>
@@ -763,8 +862,8 @@ const AddEmployee = () => {
                 placeholder="Leave blank to auto-generate secure password"
               />
             </div>
-            <div className="input-group"><label className="input-label">Date of Birth</label><input type="date" name="date_of_birth" className="input-control" value={formData.date_of_birth} onChange={handleChange} /></div>
-            <div className="input-group"><label className="input-label">Gender</label>
+            <div className="input-group"><label className="input-label">Date of Birth <span style={{color:'var(--danger)'}}>*</span></label><input type="date" name="date_of_birth" className="input-control" value={formData.date_of_birth} onChange={handleChange} /></div>
+            <div className="input-group"><label className="input-label">Gender <span style={{color:'var(--danger)'}}>*</span></label>
               <select name="gender" className="input-control" value={formData.gender} onChange={handleChange}>
                 <option value="">Select Gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
               </select>
@@ -779,7 +878,7 @@ const AddEmployee = () => {
                 <option value="widowed">Widowed</option>
               </select>
             </div>
-            <div className="input-group"><label className="input-label">Blood Group</label>
+            <div className="input-group"><label className="input-label">Blood Group <span style={{color:'var(--danger)'}}>*</span></label>
               <select name="blood_group" className="input-control" value={formData.blood_group} onChange={handleChange}>
                 <option value="">Select Blood Group</option>
                 <option value="A+">A+</option><option value="A-">A-</option>
@@ -788,10 +887,10 @@ const AddEmployee = () => {
                 <option value="O+">O+</option><option value="O-">O-</option>
               </select>
             </div>
-            <div className="input-group"><label className="input-label">Current Address</label><textarea name="current_address" className="input-control" value={formData.current_address} onChange={handleChange} rows="2" /></div>
-            <div className="input-group"><label className="input-label">Permanent Address</label><textarea name="permanent_address" className="input-control" value={formData.permanent_address} onChange={handleChange} rows="2" /></div>
-            <div className="input-group"><label className="input-label">Emergency Contact Name</label><input type="text" name="emergency_contact_name" className="input-control" value={formData.emergency_contact_name} onChange={handleChange} /></div>
-            <div className="input-group"><label className="input-label">Emergency Contact Phone</label><input type="text" name="emergency_contact_phone" className="input-control" value={formData.emergency_contact_phone} onChange={handleChange} /></div>
+            <div className="input-group"><label className="input-label">Current Address <span style={{color:'var(--danger)'}}>*</span></label><textarea name="current_address" className="input-control" value={formData.current_address} onChange={handleChange} rows="2" placeholder="Full current residential address" /></div>
+            <div className="input-group"><label className="input-label">Permanent Address</label><textarea name="permanent_address" className="input-control" value={formData.permanent_address} onChange={handleChange} rows="2" placeholder="Leave blank if same as current" /></div>
+            <div className="input-group"><label className="input-label">Emergency Contact Name <span style={{color:'var(--danger)'}}>*</span></label><input type="text" name="emergency_contact_name" className="input-control" value={formData.emergency_contact_name} onChange={handleChange} placeholder="Full name of emergency contact" /></div>
+            <div className="input-group"><label className="input-label">Emergency Contact Phone <span style={{color:'var(--danger)'}}>*</span></label><input type="tel" name="emergency_contact_phone" className="input-control" value={formData.emergency_contact_phone} onChange={handleChange} placeholder="10-digit mobile number" maxLength={10} /></div>
           </div>
         </div>
 
@@ -813,10 +912,10 @@ const AddEmployee = () => {
                 Leave blank to auto-generate sequentially.
               </span>
             </div>
-            <div className="input-group"><label className="input-label">Joining Date *</label><input type="date" name="joining_date" className="input-control" value={formData.joining_date} onChange={handleChange} required /></div>
+            <div className="input-group"><label className="input-label">Joining Date <span style={{color:'var(--danger)'}}>*</span></label><input type="date" name="joining_date" className="input-control" value={formData.joining_date} onChange={handleChange} required /></div>
             <div className="input-group">
-              <label className="input-label">Department {lookups.departments.length === 0 && lookupsError ? '⚠️' : ''}</label>
-              <select name="department_id" className="input-control" value={formData.department_id} onChange={handleChange}>
+              <label className="input-label">Department <span style={{color:'var(--danger)'}}>*</span> {lookups.departments.length === 0 && lookupsError ? '⚠️' : ''}</label>
+              <select name="department_id" className="input-control" value={formData.department_id} onChange={handleChange} required>
                 <option value="">Select Department</option>
                 {lookups.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
@@ -840,12 +939,12 @@ const AddEmployee = () => {
                 ))}
               </select>
             </div>
-            <div className="input-group"><label className="input-label">Employment Type *</label>
+            <div className="input-group"><label className="input-label">Employment Type <span style={{color:'var(--danger)'}}>*</span></label>
               <select name="employment_type" className="input-control" value={formData.employment_type} onChange={handleChange} required>
                 <option value="full_time">Full Time</option><option value="part_time">Part Time</option><option value="contract">Contract</option><option value="intern">Intern</option><option value="consultant">Consultant</option>
               </select>
             </div>
-            <div className="input-group"><label className="input-label">Experience Type *</label>
+            <div className="input-group"><label className="input-label">Experience Type <span style={{color:'var(--danger)'}}>*</span></label>
               <select name="experience_type" className="input-control" value={formData.experience_type} onChange={handleChange} required>
                 <option value="fresher">Fresher</option><option value="experienced">Experienced</option>
               </select>
@@ -884,10 +983,48 @@ const AddEmployee = () => {
             {/* Bank Details */}
             <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
               <p style={{ margin: '0 0 16px', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>Bank Details</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                <div className="input-group"><label className="input-label">Bank Name</label><input type="text" name="bank_name" className="input-control" value={formData.bank_name} onChange={handleChange} placeholder="e.g. HDFC Bank" /></div>
-                <div className="input-group"><label className="input-label">Account Number</label><input type="text" name="account_number" className="input-control" value={formData.account_number} onChange={handleChange} placeholder="e.g. 501002345678" /></div>
-                <div className="input-group"><label className="input-label">IFSC Code</label><input type="text" name="ifsc_code" className="input-control" value={formData.ifsc_code} onChange={handleChange} placeholder="e.g. HDFC0001234" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div className="input-group">
+                  <label className="input-label">Bank Name <span style={{color:'var(--danger)'}}>*</span></label>
+                  <input type="text" name="bank_name" className="input-control" value={formData.bank_name} onChange={handleChange} placeholder="e.g. HDFC Bank" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Account Number <span style={{color:'var(--danger)'}}>*</span></label>
+                  <input type="text" name="account_number" className="input-control" value={formData.account_number} onChange={handleChange} placeholder="e.g. 501002345678" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">IFSC Code <span style={{color:'var(--danger)'}}>*</span></label>
+                  <input
+                    type="text"
+                    name="ifsc_code"
+                    className="input-control"
+                    value={formData.ifsc_code}
+                    onChange={handleIFSCChange}
+                    placeholder="e.g. HDFC0001234"
+                    maxLength={11}
+                    style={{ textTransform: 'uppercase', letterSpacing: '1px' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Auto-formatted to UPPERCASE</span>
+                </div>
+              </div>
+              {/* Bank Documents Upload */}
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-color)' }}>📄 Bank Documents <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Cancelled cheque, Passbook, etc.)</span></span>
+                  <div>
+                    <input type="file" id="bankDocUpload" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.doc,.docx" onChange={handleBankDocUpload} />
+                    <button type="button" className="btn btn-secondary" onClick={() => document.getElementById('bankDocUpload').click()} style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Plus size={12} /> Add Document
+                    </button>
+                  </div>
+                </div>
+                {(formData.bank_documents || []).map((doc, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', backgroundColor: 'var(--surface-hover)', borderRadius: '6px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '13px' }}>📎 {doc.title}</span>
+                    <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setFormData(prev => ({ ...prev, bank_documents: prev.bank_documents.filter((_, i) => i !== idx) }))}><Trash2 size={14} /></button>
+                  </div>
+                ))}
+                {(!formData.bank_documents || formData.bank_documents.length === 0) && <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, fontStyle: 'italic' }}>No bank documents uploaded. Upload cancelled cheque or passbook copy.</p>}
               </div>
             </div>
 
@@ -972,21 +1109,45 @@ const AddEmployee = () => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="card-title">Education History</h3>
-            <button type="button" className="btn btn-secondary" onClick={() => addArrayItem('education', { level: 'Bachelors', degree_name: '', university_name: '', passing_year: '' })} style={{ padding: '4px 10px', fontSize: '12px' }}><Plus size={14} /> Add</button>
+            <button type="button" className="btn btn-secondary" onClick={() => addArrayItem('education', { level: 'Bachelors', degree_name: '', university_name: '', passing_year: '', percentage: '', edu_documents: [] })} style={{ padding: '4px 10px', fontSize: '12px' }}><Plus size={14} /> Add</button>
           </div>
           <div className="card-body">
             {formData.education.map((edu, idx) => (
               <div key={idx} style={{ padding: '16px', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '12px', position: 'relative' }}>
                 <button type="button" style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }} onClick={() => removeArrayItem('education', idx)}><Trash2 size={16} /></button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
-                  <div className="input-group"><label className="input-label">Level</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div className="input-group"><label className="input-label">Level <span style={{color:'var(--danger)'}}>*</span></label>
                     <select className="input-control" value={edu.level} onChange={e => handleArrayChange('education', idx, 'level', e.target.value)}>
                       <option value="10th">10th</option><option value="12th">12th</option><option value="Diploma">Diploma</option><option value="Bachelors">Bachelors</option><option value="Masters">Masters</option><option value="PhD">PhD</option><option value="Other">Other</option>
                     </select>
                   </div>
-                  <div className="input-group"><label className="input-label">Degree / Stream</label><input type="text" className="input-control" value={edu.degree_name} onChange={e => handleArrayChange('education', idx, 'degree_name', e.target.value)} placeholder="e.g. B.Tech CSE" /></div>
-                  <div className="input-group"><label className="input-label">University / Board</label><input type="text" className="input-control" value={edu.university_name} onChange={e => handleArrayChange('education', idx, 'university_name', e.target.value)} /></div>
-                  <div className="input-group"><label className="input-label">Passing Year</label><input type="number" className="input-control" value={edu.passing_year} onChange={e => handleArrayChange('education', idx, 'passing_year', e.target.value)} placeholder="2024" /></div>
+                  <div className="input-group"><label className="input-label">Degree / Stream <span style={{color:'var(--danger)'}}>*</span></label><input type="text" className="input-control" value={edu.degree_name} onChange={e => handleArrayChange('education', idx, 'degree_name', e.target.value)} placeholder="e.g. B.Tech CSE" /></div>
+                  <div className="input-group"><label className="input-label">University / Board <span style={{color:'var(--danger)'}}>*</span></label><input type="text" className="input-control" value={edu.university_name} onChange={e => handleArrayChange('education', idx, 'university_name', e.target.value)} placeholder="e.g. Delhi University" /></div>
+                  <div className="input-group"><label className="input-label">Passing Year <span style={{color:'var(--danger)'}}>*</span></label><input type="number" className="input-control" value={edu.passing_year} onChange={e => handleArrayChange('education', idx, 'passing_year', e.target.value)} placeholder="2024" min="1990" max="2030" /></div>
+                  <div className="input-group"><label className="input-label">% / CGPA</label><input type="text" className="input-control" value={edu.percentage || ''} onChange={e => handleArrayChange('education', idx, 'percentage', e.target.value)} placeholder="e.g. 75% or 8.5" /></div>
+                </div>
+                {/* Education Documents */}
+                <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>📄 Documents (Certificates, Marksheets)</span>
+                    <div>
+                      <input type="file" id={`eduDoc_${idx}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.doc,.docx" onChange={e => handleEduDocUpload(e, idx)} />
+                      <button type="button" className="btn btn-secondary" onClick={() => document.getElementById(`eduDoc_${idx}`).click()} style={{ padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <Plus size={11} /> Add Document
+                      </button>
+                    </div>
+                  </div>
+                  {(edu.edu_documents || []).map((doc, dIdx) => (
+                    <div key={dIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', backgroundColor: 'var(--surface-hover)', borderRadius: '5px', marginBottom: '3px' }}>
+                      <span style={{ fontSize: '12px' }}>📎 {doc.title}</span>
+                      <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => {
+                        const arr = [...formData.education];
+                        arr[idx].edu_documents = arr[idx].edu_documents.filter((_, i) => i !== dIdx);
+                        setFormData(prev => ({ ...prev, education: arr }));
+                      }}><Trash2 size={12} /></button>
+                    </div>
+                  ))}
+                  {(!edu.edu_documents || edu.edu_documents.length === 0) && <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No documents. Upload marksheet or degree certificate.</span>}
                 </div>
               </div>
             ))}

@@ -2386,9 +2386,67 @@ INSERT IGNORE INTO `leave_types` (`id`, `organization_id`, `name`, `code`, `days
 (2, 1, 'Sick Leave', 'SL', 10, 1, 1),
 (3, 1, 'Earned Leave', 'EL', 15, 1, 1);
 
--- 9. Work Shift
-INSERT IGNORE INTO `shifts` (`id`, `organization_id`, `name`, `start_time`, `end_time`, `grace_period_minutes`) VALUES
-(1, 1, 'General Day Shift', '09:30:00', '18:30:00', 15);
+-- 10. JMK Social Tables
+CREATE TABLE IF NOT EXISTS `social_posts` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `organization_id` INT NOT NULL,
+    `author_id` INT NOT NULL,
+    `content` TEXT NOT NULL,
+    `post_type` ENUM('standard', 'milestone', 'celebration', 'achievement', 'announcement') DEFAULT 'standard',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL,
+    INDEX `idx_social_posts_org_created` (`organization_id`, `created_at` DESC),
+    INDEX `idx_social_posts_author` (`author_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `social_post_media` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `organization_id` INT NOT NULL,
+    `post_id` INT NOT NULL,
+    `media_url` VARCHAR(500) NOT NULL,
+    `media_type` VARCHAR(50) DEFAULT 'image',
+    `file_name` VARCHAR(255),
+    `file_size` INT,
+    `mime_type` VARCHAR(100),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_social_media_post` (`post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `social_post_likes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `organization_id` INT NOT NULL,
+    `post_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_post_user_like` (`post_id`, `user_id`),
+    INDEX `idx_social_likes_post` (`post_id`),
+    INDEX `idx_social_likes_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `social_post_comments` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `organization_id` INT NOT NULL,
+    `post_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `content` TEXT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL,
+    INDEX `idx_social_comments_post_created` (`post_id`, `created_at` ASC),
+    INDEX `idx_social_comments_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `social_post_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `organization_id` INT NOT NULL,
+    `post_id` INT NOT NULL,
+    `reporter_id` INT NOT NULL,
+    `reason` VARCHAR(255) NOT NULL,
+    `status` ENUM('pending', 'reviewed', 'dismissed') DEFAULT 'pending',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_social_reports_org_status` (`organization_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================================================

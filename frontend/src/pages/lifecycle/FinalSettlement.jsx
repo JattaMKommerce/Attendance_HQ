@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Banknote, Search, X, CheckCircle, Calculator, Clock, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Banknote, Search, X, CheckCircle, Calculator, Clock, Plus, ArrowLeft } from 'lucide-react';
 import { fetchLifecycleContext } from './lifecycleHelper';
+import EmployeePicker from '../../components/common/EmployeePicker';
 
-const INITIAL_SETTLEMENT_DATA = [
-  { id: 'EMP002', name: 'Rahul Sharma', department: 'IT', lastWorkingDay: '2025-09-30', dues: 'Salary, Leave Encashment, Bonus', grossEarnings: 140000, totalDeductions: 15000, amount: '₹1,25,000', status: 'Pending', bankAccount: 'HDFC - 4821', salaryMonth: '₹1,00,000', leaveEncashment: '₹25,000', bonus: '₹15,000', lop: '₹5,000', assetRecovery: '₹10,000' },
-  { id: 'EMP007', name: 'Priya Patel', department: 'Human Resources', lastWorkingDay: '2025-09-15', dues: 'Salary, LOP Deductions', grossEarnings: 55000, totalDeductions: 10000, amount: '₹45,000', status: 'In Process', bankAccount: 'ICICI - 9021', salaryMonth: '₹45,000', leaveEncashment: '₹10,000', bonus: '₹0', lop: '₹10,000', assetRecovery: '₹0' },
-  { id: 'EMP011', name: 'Amit Kumar', department: 'Operations', lastWorkingDay: '2025-10-31', dues: 'Salary, Leave Encashment', grossEarnings: 90000, totalDeductions: 12000, amount: '₹78,000', status: 'Pending', bankAccount: 'SBI - 3144', salaryMonth: '₹70,000', leaveEncashment: '₹20,000', bonus: '₹0', lop: '₹5,000', assetRecovery: '₹7,000' },
-];
+const INITIAL_SETTLEMENT_DATA = [];
 
 export default function FinalSettlement() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [tableData, setTableData] = useState(INITIAL_SETTLEMENT_DATA);
   const [selectedEmp, setSelectedEmp] = useState(null);
+  const [selectedEmployeeObj, setSelectedEmployeeObj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -26,15 +26,15 @@ export default function FinalSettlement() {
   const [formData, setFormData] = useState({
     department: '',
     employeeId: '',
-    lastWorkingDay: '2025-10-15',
-    salary: 60000,
-    leaveEncashment: 15000,
-    bonus: 5000,
-    lop: 3000,
-    assetRecovery: 2000,
+    lastWorkingDay: new Date().toISOString().split('T')[0],
+    salary: 0,
+    leaveEncashment: 0,
+    bonus: 0,
+    lop: 0,
+    assetRecovery: 0,
     otherDeductions: 0,
-    bankAccount: 'HDFC - 8923',
-    duesSummary: 'Salary, Encashment, Recovery'
+    bankAccount: 'HDFC Bank',
+    duesSummary: 'Salary, Leave Encashment'
   });
 
   useEffect(() => {
@@ -53,42 +53,44 @@ export default function FinalSettlement() {
   }, []);
 
   const handleOpenModal = () => {
-    const initialDept = departments[0] || 'IT';
-    const firstEmp = employees.find(e => e.department === initialDept) || employees[0];
-
+    setSelectedEmployeeObj(null);
     setFormData({
-      department: initialDept,
-      employeeId: firstEmp ? firstEmp.id : '',
-      lastWorkingDay: '2025-10-15',
-      salary: 65000,
-      leaveEncashment: 12000,
-      bonus: 8000,
-      lop: 2000,
-      assetRecovery: 3000,
+      department: '',
+      employeeId: '',
+      lastWorkingDay: new Date().toISOString().split('T')[0],
+      salary: 0,
+      leaveEncashment: 0,
+      bonus: 0,
+      lop: 0,
+      assetRecovery: 0,
       otherDeductions: 0,
-      bankAccount: 'HDFC - 4821',
-      duesSummary: 'Salary, Leave Encashment, Performance Bonus'
+      bankAccount: 'HDFC Bank',
+      duesSummary: 'Final Salary, Leave Encashment'
     });
     setShowModal(true);
   };
 
-  const handleDepartmentChange = (dept) => {
-    const filteredEmps = employees.filter(e => e.department === dept);
-    const matchedEmp = filteredEmps[0] || employees[0];
-    setFormData(prev => ({
-      ...prev,
-      department: dept,
-      employeeId: matchedEmp ? matchedEmp.id : ''
-    }));
-  };
-
-  const handleEmployeeChange = (empId) => {
-    const emp = employees.find(e => e.id.toString() === empId.toString());
+  const handlePickerChange = (emp) => {
+    setSelectedEmployeeObj(emp);
     if (emp) {
+      const gross = Number(emp.gross_salary || 0);
+      const leaveEnc = Math.round((gross / 30) * Math.min(Number(emp.monthly_paid_leaves || 1) * 3, 15));
       setFormData(prev => ({
         ...prev,
         employeeId: emp.id,
-        department: emp.department || prev.department
+        department: emp.department || '',
+        salary: gross,
+        leaveEncashment: leaveEnc,
+        bankAccount: emp.bank_account_no ? `${emp.bank_name || 'Bank'} - ${emp.bank_account_no.slice(-4)}` : prev.bankAccount,
+        duesSummary: 'Final Salary, Leave Encashment'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        employeeId: '',
+        department: '',
+        salary: 0,
+        leaveEncashment: 0
       }));
     }
   };
@@ -99,14 +101,18 @@ export default function FinalSettlement() {
 
   const handleCalculateSubmit = (e) => {
     e.preventDefault();
-    const emp = employees.find(e => e.id.toString() === formData.employeeId.toString());
-    const empName = emp ? emp.name : (formData.employeeId || 'Employee');
-    const empCode = emp?.employee_code || formData.employeeId || `EMP${Math.floor(100 + Math.random() * 900)}`;
+    if (!selectedEmployeeObj && !formData.employeeId) {
+      alert('Please select an active employee first.');
+      return;
+    }
+    const emp = selectedEmployeeObj;
+    const empName = emp ? emp.name : 'Employee';
+    const empCode = emp?.employee_code || `EMP${emp?.id || Math.floor(100 + Math.random() * 900)}`;
 
     const newRecord = {
       id: empCode,
       name: empName,
-      department: formData.department || emp?.department || 'Operations',
+      department: emp?.department || formData.department || 'Operations',
       lastWorkingDay: formData.lastWorkingDay,
       dues: formData.duesSummary || 'Salary, Leave Encashment',
       grossEarnings,
@@ -188,8 +194,16 @@ export default function FinalSettlement() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Banknote size={24} color="#059669" /> Full & Final Settlement
           </h1>
@@ -315,36 +329,16 @@ export default function FinalSettlement() {
             </div>
 
             <form onSubmit={handleCalculateSubmit} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <EmployeePicker 
+                  label="Select Active Employee *" 
+                  required 
+                  value={selectedEmployeeObj} 
+                  onChange={handlePickerChange} 
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Department</label>
-                  <select 
-                    required 
-                    value={formData.department} 
-                    onChange={(e) => handleDepartmentChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Employee</label>
-                  <select 
-                    required 
-                    value={formData.employeeId} 
-                    onChange={(e) => handleEmployeeChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Employee</option>
-                    {employees
-                      .filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase())
-                      .map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)}
-                    {employees.filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase()).length === 0 &&
-                      employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)
-                    }
-                  </select>
-                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Last Working Day</label>
                   <input 

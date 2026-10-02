@@ -694,6 +694,16 @@ class AiService {
    */
   async executeTool(intent, organizationId, userContext, params, resolvedData) {
     switch (intent) {
+      // ── General / Greetings ──
+      case 'stella_greeting': {
+        const isAdmin = ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN'].some(r => userContext.roles?.includes(r));
+        const adminOptions = isAdmin ? '\n- 👥 View employees, absent lists, and department reports\n- 🚀 Onboard new employees' : '';
+        return {
+          success: true,
+          message: `Hello! I'm Stella, your HRMS AI Assistant. 🌟\n\nI can help you with:\n- 📅 Checking your attendance & clocking in/out\n- 🌴 Checking leave balances & applying for leave\n- 💰 Viewing payslip details\n- 👤 Viewing your profile${adminOptions}\n\nHow can I help you today?`
+        };
+      }
+
       // ── Employee Self Tools ──
       case 'get_my_profile':
         return await employeeTools.getMyProfile(organizationId, userContext);

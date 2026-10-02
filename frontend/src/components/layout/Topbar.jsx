@@ -2,7 +2,8 @@ import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Menu, Bell, Search, LogOut, User, Sparkles, 
   Calendar, Clock, IndianRupee, UserPlus, CheckCircle2, 
-  X, ChevronRight, AlertCircle, ShieldAlert 
+  X, ChevronRight, AlertCircle, ShieldAlert, ArrowLeft,
+  Moon, Sun
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -25,6 +26,33 @@ const Topbar = ({ toggleMobileSidebar }) => {
   });
   const notifRef = useRef(null);
   const navigate = useNavigate();
+
+  // Dark / Light Theme state with local persistence
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem('jmk_theme') === 'dark';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('jmk_theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('jmk_theme', 'light');
+      }
+    } catch (e) {
+      console.warn('Failed to update theme storage', e);
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark(prev => !prev);
+  };
 
   // Helper to format live India Time and Date (IST, UTC+5:30)
   const getIndiaDateTime = () => {
@@ -149,58 +177,6 @@ const Topbar = ({ toggleMobileSidebar }) => {
           }
         }
 
-        // 3. Operational Milestone: Payroll Ready
-        items.push({
-          id: 'payroll-cycle-jmk',
-          app: 'JMK Payroll',
-          icon: IndianRupee,
-          iconBg: '#4f46e5',
-          title: 'Payroll Cycle Active',
-          desc: 'Current monthly salary calculations and deductions are ready for JMK review.',
-          time: 'Active Cycle',
-          actionLabel: 'Process',
-          actionPath: '/app/payroll/overview'
-        });
-
-        // 4. Onboarding Checklist
-        items.push({
-          id: 'onboarding-alice-smith',
-          app: 'JMK Onboarding',
-          icon: UserPlus,
-          iconBg: '#0284c7',
-          title: 'Onboarding Checklist: Alice Smith',
-          desc: 'IT equipment assignment and Google Workspace provisioning pending for new hire.',
-          time: 'Pending IT',
-          actionLabel: 'Review',
-          actionPath: '/app/onboarding'
-        });
-
-        // 5. Probation Review
-        items.push({
-          id: 'probation-rahul-sharma',
-          app: 'JMK Lifecycle',
-          icon: ShieldAlert,
-          iconBg: '#8b5cf6',
-          title: 'Probation Review: Rahul Sharma',
-          desc: '3-month performance review due in 5 days for permanent confirmation.',
-          time: '5 Days Left',
-          actionLabel: 'Evaluate',
-          actionPath: '/app/lifecycle/probation'
-        });
-
-        // 6. Recruitment Evaluation
-        items.push({
-          id: 'recruitment-charlie-davis',
-          app: 'JMK Hiring',
-          icon: User,
-          iconBg: '#ec4899',
-          title: 'Interview Feedback: Charlie Davis',
-          desc: 'UX Designer applicant completed interview stage, awaiting final rating.',
-          time: 'Interview Stage',
-          actionLabel: 'Review',
-          actionPath: '/app/recruitment'
-        });
-
         if (isMounted) {
           setRawNotifications(items);
         }
@@ -268,6 +244,17 @@ const Topbar = ({ toggleMobileSidebar }) => {
         >
           <Menu size={20} />
         </button>
+
+        <button 
+          type="button"
+          className="topbar-back-btn" 
+          onClick={() => navigate(-1)}
+          title="Go back to previous page"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={14} />
+          <span>Back</span>
+        </button>
         
         {/* Live Auto-Updating India Time & Date Widget */}
         <div className="topbar-india-time" title="Current Live Indian Standard Time (IST, UTC+5:30)">
@@ -281,7 +268,30 @@ const Topbar = ({ toggleMobileSidebar }) => {
         </div>
       </div>
 
-      <div className="topbar-right" style={{ position: 'relative' }} ref={notifRef}>
+      <div className="topbar-right" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }} ref={notifRef}>
+        {/* Dark / Light Mode Toggle Button */}
+        <button 
+          type="button"
+          className="icon-btn topbar-theme-btn" 
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          onClick={toggleTheme}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '8px',
+            border: '1px solid var(--border, #e2e8f0)',
+            background: 'var(--bg-surface, #ffffff)',
+            color: isDark ? '#fbbf24' : '#64748b',
+            transition: 'all 0.2s ease'
+          }}
+          aria-label="Toggle theme"
+        >
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         {/* Actionable Notification Center Trigger with Gmail-style Badge */}
         <button 
           className="icon-btn topbar-notif-btn" 
@@ -406,8 +416,15 @@ const Topbar = ({ toggleMobileSidebar }) => {
           </div>
         )}
 
-        {/* Logout Button */}
+        {/* Profile Initial Avatar & Logout Button */}
         <div style={styles.profileMenu}>
+          <div 
+            style={styles.avatar} 
+            title={`${user?.name || user?.email || 'User'}`}
+            onClick={() => navigate(user?.roles?.includes('EMPLOYEE') && !user?.roles?.includes('ORG_ADMIN') ? '/app/employee/profile' : '/app/dashboard')}
+          >
+            {(user?.first_name?.charAt(0) || user?.name?.charAt(0) || user?.email?.charAt(0) || 'U').toUpperCase()}
+          </div>
           <button className="icon-btn" onClick={logout} title="Logout">
             <LogOut size={18} />
           </button>

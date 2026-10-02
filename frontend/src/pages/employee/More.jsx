@@ -201,7 +201,7 @@ export default function More() {
             <div style={{ backgroundColor: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b' }}>
                 <Mail size={16} color="#2563eb" />
-                <span>hr@jattamkommerce.com</span>
+                <span>hr.jattamkommerce@gmail.com</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b' }}>
                 <Phone size={16} color="#2563eb" />

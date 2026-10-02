@@ -62,3 +62,6 @@ export const employeePortalApi = {
   // ─── DIRECTORY ─────────────────────────────────────────────────────────────
   getDirectory: (params) => api.get('/employee/directory', { params }),
 };
+
+export default employeePortalApi;
+

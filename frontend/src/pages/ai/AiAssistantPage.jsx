@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Sparkles, Bot, History, CheckCircle, Clock, ShieldCheck, Terminal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, Bot, History, CheckCircle, Clock, ShieldCheck, Terminal, ArrowLeft } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import AiCommandCenter from '../../components/ai/AiCommandCenter';
 import aiApi from '../../services/aiApi';
 
 export default function AiAssistantPage() {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -31,24 +33,27 @@ export default function AiAssistantPage() {
     }
   }, [user]);
 
+  const [showCapabilities, setShowCapabilities] = useState(false);
+
   return (
-    <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px 20px' }}>
-      <div className="page-header" style={{ marginBottom: '20px' }}>
+    <div className="page-container ai-page-container">
+      <div className="page-header ai-page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <h1 className="page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bot size={26} color="var(--accent-hover)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+              title="Go Back"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+            <h1 className="page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.25rem' }}>
+              <Bot size={24} color="var(--accent-hover)" />
               <span>Stella AI Assistant</span>
             </h1>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: '700',
-              padding: '2px 8px',
-              borderRadius: '999px',
-              backgroundColor: isAdmin ? 'var(--accent-soft)' : '#e0e7ff',
-              color: isAdmin ? 'var(--accent-hover)' : '#4338ca'
-            }}>
-              {isAdmin ? 'ADMIN OPERATOR' : 'EMPLOYEE ASSISTANT'}
+            <span className={`ai-mode-pill ${isAdmin ? 'ai-mode-admin' : 'ai-mode-employee'}`} style={{ display: 'none' }}>
+              {isAdmin ? 'ADMIN' : 'EMPLOYEE'}
             </span>
           </div>
         </div>
@@ -58,17 +63,31 @@ export default function AiAssistantPage() {
       <AiCommandCenter className="layer-3d" onActionComplete={fetchHistory} />
 
       {/* Capability Guides & Audit History */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginTop: '24px' }}>
+      <div className="ai-page-bottom-grid">
         
-        {/* Capabilities Card */}
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={18} color="var(--accent-hover)" />
-            <h3 className="card-title" style={{ margin: 0, fontSize: '15px' }}>
-              {isAdmin ? 'Authorized Admin Capabilities' : 'Authorized Employee Capabilities'}
-            </h3>
+        {/* Capabilities Card (Collapsible on mobile to keep page clean & avoid text walls) */}
+        <div className="card ai-capabilities-card">
+          <div 
+            className="card-header" 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            onClick={() => setShowCapabilities(!showCapabilities)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldCheck size={18} color="var(--accent-hover)" />
+              <h3 className="card-title" style={{ margin: 0, fontSize: '14.5px' }}>
+                {isAdmin ? 'Admin Capabilities' : 'Employee Capabilities'}
+              </h3>
+            </div>
+            <button 
+              type="button" 
+              className="btn-toggle-subtle" 
+              style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+            >
+              {showCapabilities ? 'Hide' : 'View Guide'}
+            </button>
           </div>
-          <div className="card-body" style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+          {(showCapabilities || typeof window === 'undefined' || window.innerWidth > 768) && (
+            <div className="card-body" style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
             {isAdmin ? (
               <ul style={{ margin: 0, paddingLeft: '18px' }}>
                 <li><strong>Onboard Employees:</strong> Multi-step workflows creating profiles, IDs, designations, checklists, and access credentials.</li>
@@ -90,6 +109,7 @@ export default function AiAssistantPage() {
               </ul>
             )}
           </div>
+          )}
         </div>
 
         {/* Recent Command Activity */}

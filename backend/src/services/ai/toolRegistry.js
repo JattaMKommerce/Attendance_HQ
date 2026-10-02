@@ -339,8 +339,21 @@ const TOOL_REGISTRY = {
     }
   },
 
-  // ─── EMPLOYEE TOOLS (Self-Scoped) ──────────────────────────────────────────
+  // ─── GENERAL / GREETING TOOLS ─────────────────────────────────────────────
 
+  'stella_greeting': {
+    name: 'stella_greeting',
+    description: 'Introduce Stella AI and list available capabilities',
+    allowedRoles: ['EMPLOYEE', 'SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'PAYROLL_MANAGER', 'FINANCE'],
+    requiredPermission: null,
+    requiresOrgContext: false,
+    selfScoped: false,
+    requiresConfirmation: false,
+    requiresAudit: false,
+    parameters: {}
+  },
+
+  // ─── EMPLOYEE TOOLS (Self-Scoped) ──────────────────────────────────────────
 
   'get_my_profile': {
     name: 'get_my_profile',

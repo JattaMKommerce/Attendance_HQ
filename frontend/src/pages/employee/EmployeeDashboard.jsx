@@ -2,19 +2,17 @@ import React, { useContext, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Calendar, Clock, FileText, Folder, Users, Megaphone, 
-  CheckCircle, ChevronRight, AlertCircle, LogIn, LogOut,
-  Sparkles, Gift, ArrowRight
+  CheckCircle, AlertCircle, LogIn, LogOut, User, QrCode
 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 import { EmployeeContext } from '../../context/EmployeeContext';
-import AiCommandBar from '../../components/ai/AiCommandBar';
+import QrAttendanceScannerModal from '../../components/attendance/QrAttendanceScannerModal';
 
 export default function EmployeeDashboard() {
+  const { user } = useContext(AuthContext);
   const { 
     todayAttendance, 
-    leaveBalance, 
     shift, 
-    nextHoliday, 
-    announcements, 
     checkIn, 
     checkOut, 
     loading, 
@@ -24,6 +22,7 @@ export default function EmployeeDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [showQrScanner, setShowQrScanner] = useState(false);
 
   // Live timer tick
   useEffect(() => {
@@ -56,6 +55,10 @@ export default function EmployeeDashboard() {
     const diffSecs = Math.floor((diffMs % 60000) / 1000);
     return `${diffHrs.toString().padStart(2, '0')}h ${diffMins.toString().padStart(2, '0')}m ${diffSecs.toString().padStart(2, '0')}s`;
   };
+
+  const shiftTimeString = shift?.start_time && shift?.end_time 
+    ? `${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}`
+    : '09:00 - 18:00';
 
   const handleAttendanceAction = async () => {
     if (actionLoading) return;
@@ -94,16 +97,11 @@ export default function EmployeeDashboard() {
   return (
     <div style={{ padding: '0 0 24px 0' }}>
       
-      {/* Shift & Date Info Bar */}
-      <div style={{ padding: '0 20px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+      {/* Clean Date Header (No duplicate greeting overwriting) */}
+      <div style={{ padding: '12px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>
           {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
-        {shift && (
-          <div style={{ fontSize: '12px', padding: '3px 8px', backgroundColor: '#e2e8f0', borderRadius: '6px', color: '#334155', fontWeight: '600' }}>
-            Shift: {shift.name || 'General'} ({shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)})
-          </div>
-        )}
       </div>
 
       {/* Feedback Toast */}
@@ -125,13 +123,8 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
-      {/* Prominent AI Command Bar */}
-      <div style={{ padding: '0 20px', marginBottom: '16px' }}>
-        <AiCommandBar />
-      </div>
-
-      {/* Hero Attendance Card */}
-      <div style={{ padding: '0 20px', marginBottom: '20px' }}>
+      {/* Hero Attendance Card (Workable Clock In / Clock Out with Condensed Shift Timing) */}
+      <div style={{ padding: '0 20px', marginBottom: '24px' }}>
         <div style={{
           backgroundColor: isCheckedIn ? '#0f172a' : '#ffffff',
           color: isCheckedIn ? '#ffffff' : '#0f172a',
@@ -166,20 +159,34 @@ export default function EmployeeDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <div style={{ fontSize: '13px', color: isCheckedIn ? '#94a3b8' : '#64748b', marginBottom: '4px' }}>
-                {isCheckedIn ? 'Time Elapsed Today' : isCheckedOut ? 'Total Working Hours' : 'Shift Target: 9h'}
+                {isCheckedIn 
+                  ? 'Time Elapsed Today' 
+                  : isCheckedOut 
+                    ? 'Total Working Hours' 
+                    : `Shift: ${shift?.name || 'General'}`}
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '700', letterSpacing: '-0.02em', color: isCheckedIn ? '#f8fafc' : '#0f172a' }}>
-                {isCheckedIn ? getElapsedDuration() : isCheckedOut ? `${todayAttendance.total_hours || 0} hrs` : '-- : -- : --'}
+              <div style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.02em', color: isCheckedIn ? '#f8fafc' : '#0f172a' }}>
+                {isCheckedIn 
+                  ? getElapsedDuration() 
+                  : isCheckedOut 
+                    ? (todayAttendance?.work_duration_minutes ? `${(todayAttendance.work_duration_minutes / 60).toFixed(1)} hrs` : 'Completed') 
+                    : shiftTimeString}
               </div>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '12px', color: isCheckedIn ? '#94a3b8' : '#64748b' }}>
-                Check-in: <strong style={{ color: isCheckedIn ? '#f1f5f9' : '#1e293b' }}>{formatShortTime(todayAttendance?.check_in_time)}</strong>
-              </div>
-              {isCheckedOut && (
+              {todayAttendance?.check_in_time ? (
+                <div style={{ fontSize: '12px', color: isCheckedIn ? '#94a3b8' : '#64748b' }}>
+                  Check-in: <strong style={{ color: isCheckedIn ? '#f1f5f9' : '#1e293b' }}>{formatShortTime(todayAttendance.check_in_time)}</strong>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Target: <strong>9h</strong>
+                </div>
+              )}
+              {todayAttendance?.check_out_time && (
                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                  Check-out: <strong style={{ color: '#1e293b' }}>{formatShortTime(todayAttendance?.check_out_time)}</strong>
+                  Check-out: <strong style={{ color: '#1e293b' }}>{formatShortTime(todayAttendance.check_out_time)}</strong>
                 </div>
               )}
             </div>
@@ -235,81 +242,57 @@ export default function EmployeeDashboard() {
               Attendance recorded for today. See you next shift!
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Leave Balances Quick Row */}
-      <div style={{ padding: '0 20px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', margin: 0 }}>
-            Leave Balances
-          </h3>
-          <NavLink to="/app/employee/leave/apply" style={{ fontSize: '12px', color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}>
-            Apply Leave &rarr;
-          </NavLink>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px' }}>
-          {leaveBalance && leaveBalance.length > 0 ? (
-            leaveBalance.map((lb) => (
-              <div
-                key={lb.leave_type_id || lb.name}
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'center'
-                }}
-              >
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#2563eb' }}>
-                  {lb.available_days != null 
-                    ? lb.available_days 
-                    : (lb.remaining != null 
-                        ? lb.remaining 
-                        : Math.max(0, (parseFloat(lb.total_days || lb.allocated || 0) - parseFloat(lb.used_days || lb.used || 0))))}
-                </div>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#334155', marginTop: '2px' }}>
-                  {lb.code || lb.name}
-                </div>
-                <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-                  Available
-                </div>
-              </div>
-            ))
-          ) : (
-            <div style={{ gridColumn: '1 / -1', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '12px', color: '#64748b', textAlign: 'center' }}>
-              Standard Leave Balances (Casual, Sick, Earned)
-            </div>
+          {/* Contactless Office QR Scanner Action */}
+          {!isCheckedOut && (
+            <button
+              type="button"
+              onClick={() => setShowQrScanner(true)}
+              disabled={actionLoading}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '11px',
+                borderRadius: '10px',
+                border: isCheckedIn ? '1px solid #475569' : '1px solid #93c5fd',
+                fontWeight: '600',
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                backgroundColor: isCheckedIn ? '#1e293b' : '#eff6ff',
+                color: isCheckedIn ? '#f8fafc' : '#2563eb',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+              }}
+            >
+              <QrCode size={17} color={isCheckedIn ? '#60a5fa' : '#2563eb'} />
+              <span>{isCheckedIn ? 'Scan Office QR to Clock Out' : 'Scan Office QR to Clock In'}</span>
+            </button>
           )}
         </div>
       </div>
 
-      {/* Grid Quick Actions */}
+      {/* Grid Quick Services (Unique Features, No Repetition from Bottom Nav Bar) */}
       <div style={{ padding: '0 20px', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', margin: '0 0 12px 0' }}>
           Quick Services
         </h3>
         <div className="grid-container">
-          <NavLink to="/app/employee/leave" className="grid-item">
-            <div className="grid-icon-wrapper" style={{ backgroundColor: '#e0e7ff', color: '#4f46e5' }}>
-              <Calendar size={22} />
-            </div>
-            <span className="grid-item-text">My Leave</span>
-          </NavLink>
-
-          <NavLink to="/app/employee/attendance" className="grid-item">
-            <div className="grid-icon-wrapper" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
-              <Clock size={22} />
-            </div>
-            <span className="grid-item-text">Attendance</span>
-          </NavLink>
-
           <NavLink to="/app/employee/payslips" className="grid-item">
             <div className="grid-icon-wrapper" style={{ backgroundColor: '#f3e8ff', color: '#9333ea' }}>
               <FileText size={22} />
             </div>
             <span className="grid-item-text">Payslips</span>
+          </NavLink>
+
+          <NavLink to="/app/employee/leave" className="grid-item">
+            <div className="grid-icon-wrapper" style={{ backgroundColor: '#e0e7ff', color: '#4f46e5' }}>
+              <Calendar size={22} />
+            </div>
+            <span className="grid-item-text">My Leave</span>
           </NavLink>
 
           <NavLink to="/app/employee/documents" className="grid-item">
@@ -332,75 +315,31 @@ export default function EmployeeDashboard() {
             </div>
             <span className="grid-item-text">Notices</span>
           </NavLink>
-        </div>
-      </div>
 
-      {/* Next Upcoming Holiday */}
-      {nextHoliday && (
-        <div style={{ padding: '0 20px', marginBottom: '24px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: '12px',
-            padding: '14px 16px'
-          }}>
-            <div style={{ backgroundColor: '#dbeafe', color: '#2563eb', padding: '10px', borderRadius: '10px' }}>
-              <Gift size={22} />
+          <NavLink to="/app/employee/profile" className="grid-item">
+            <div className="grid-icon-wrapper" style={{ backgroundColor: '#e0f2fe', color: '#0284c7' }}>
+              <User size={22} />
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#2563eb' }}>
-                Upcoming Holiday
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
-                {nextHoliday.name}
-              </div>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                {new Date(nextHoliday.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Announcements */}
-      <div style={{ padding: '0 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', margin: 0 }}>
-            Recent Announcements
-          </h3>
-          <NavLink to="/app/employee/announcements" style={{ fontSize: '12px', color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}>
-            View All &rarr;
+            <span className="grid-item-text">My Profile</span>
           </NavLink>
         </div>
-
-        {announcements && announcements.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {announcements.slice(0, 3).map((a) => (
-              <div key={a.id} className="mobile-card" style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', padding: '14px' }}>
-                <div style={{ width: '38px', height: '38px', backgroundColor: '#fef3c7', color: '#d97706', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Megaphone size={18} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>{a.title}</div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', lineHeight: '1.4' }}>
-                    {a.content?.slice(0, 110)}{a.content?.length > 110 ? '...' : ''}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
-                    {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mobile-card" style={{ textAlign: 'center', padding: '24px 16px', color: '#94a3b8' }}>
-            No recent announcements.
-          </div>
-        )}
       </div>
+
+      {/* Office QR Camera Scanner Modal */}
+      <QrAttendanceScannerModal
+        isOpen={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        isCheckedIn={isCheckedIn}
+        isCheckedOut={isCheckedOut}
+        onSuccess={async () => {
+          await refreshAttendance();
+          setFeedback({
+            type: 'success',
+            message: isCheckedIn ? 'Clocked out successfully via Office QR!' : 'Clocked in successfully via Office QR!'
+          });
+        }}
+        employee={user}
+      />
 
       {/* Quick CSS */}
       <style>{`

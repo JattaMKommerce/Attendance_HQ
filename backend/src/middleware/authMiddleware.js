@@ -84,10 +84,22 @@ const authenticate = async (req, res, next) => {
       }
     }
 
+    // Ensure organization_id is always resolved and never null
+    let orgId = user.organization_id;
+    if (!orgId) {
+      const [empOrgRows] = await db.execute('SELECT organization_id FROM employees WHERE user_id = ? LIMIT 1', [user.id]);
+      if (empOrgRows.length > 0 && empOrgRows[0].organization_id) {
+        orgId = empOrgRows[0].organization_id;
+      } else {
+        const [firstOrg] = await db.execute('SELECT id FROM organizations ORDER BY id ASC LIMIT 1');
+        orgId = firstOrg.length > 0 ? firstOrg[0].id : 1;
+      }
+    }
+
     // Attach verified context to req.user
     req.user = {
       id: user.id,
-      organization_id: user.organization_id,
+      organization_id: orgId || 1,
       employee_id: employee_id,
       roles: userRoles,
       permissions: Array.from(permissionsSet)
@@ -122,7 +134,13 @@ const authorizePermission = (requiredPermission) => {
       return res.status(401).json({ success: false, message: 'Not authenticated.' });
     }
 
-    if (req.user.roles.includes('SUPER_ADMIN') || req.user.roles.includes('ORG_ADMIN')) {
+    if (
+      req.user.roles.includes('SUPER_ADMIN') || 
+      req.user.roles.includes('ORG_ADMIN') || 
+      req.user.roles.includes('HR_ADMIN') || 
+      req.user.roles.includes('ADMIN') ||
+      req.user.roles.includes('HR')
+    ) {
        return next();
     }
 

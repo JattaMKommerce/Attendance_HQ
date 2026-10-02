@@ -133,7 +133,7 @@ const MyDocuments = () => {
     <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
+        <div className="desktop-only">
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
             My Documents
           </h1>

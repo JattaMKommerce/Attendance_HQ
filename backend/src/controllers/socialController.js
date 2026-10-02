@@ -54,23 +54,26 @@ class SocialController {
 
   async createPost(req, res, next) {
     try {
-      const organizationId = req.user.organization_id;
-      const authorId = req.user.id;
-      const { content, post_type } = req.body;
+      const organizationId = Number(req.user.organization_id) || 1;
+      const authorId = Number(req.user.id);
+      const { content, post_type, postType } = req.body;
       const files = req.files || [];
 
-      if (!content || !content.trim()) {
+      const hasContent = content && typeof content === 'string' && content.trim().length > 0;
+      const hasFiles = files && files.length > 0;
+
+      if (!hasContent && !hasFiles) {
         return res.status(400).json({
           success: false,
-          message: 'Post content cannot be empty'
+          message: 'Post must contain either text or an attached image'
         });
       }
 
       const post = await socialService.createPost({
         organizationId,
         authorId,
-        content,
-        postType: post_type,
+        content: hasContent ? content.trim() : '',
+        postType: post_type || postType || 'standard',
         files
       });
 

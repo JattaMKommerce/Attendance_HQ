@@ -70,3 +70,13 @@ export const uploadResume = async (file) => {
 export const getEmployeeIdCardUrl = (id) => {
   return `${api.defaults.baseURL}/employees/${id}/id-card`;
 };
+
+export const deleteEmployee = async (id) => {
+  const response = await api.delete(`/employees/${id}`);
+  return response.data;
+};
+
+export const resetTestData = async () => {
+  const response = await api.post('/employees/admin-reset-test-data');
+  return response.data;
+};

@@ -109,7 +109,7 @@ export default function AppDownload() {
             marginBottom: '12px',
             border: '1px solid #bfdbfe'
           }}>
-            JATTA M KOMMERCE
+            JMK
           </div>
 
           <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 10px', color: '#0f172a' }}>
@@ -119,34 +119,37 @@ export default function AppDownload() {
             Install our lightweight, mobile-first employee portal on your smartphone for 1-tap daily attendance, leaves, payslips, and self-service.
           </p>
 
-          {/* Direct Native Install Button (if browser supports PWA prompt) */}
-          {deferredPrompt && !isInstalled && (
-            <div style={{ marginBottom: '20px' }}>
-              <button
-                type="button"
-                onClick={handleInstallClick}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
-                }}
-              >
-                <Download size={20} />
-                Install JMK HRMS App Now
-              </button>
+          {/* Green Highlighted Direct Mobile App APK Download Button (Top Primary) */}
+          <div style={{ marginBottom: '22px' }}>
+            <a
+              href="/jmk-hrms.apk"
+              download="jmk-hrms.apk"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '16px 24px',
+                backgroundColor: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '14px',
+                fontSize: '16px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(5, 150, 105, 0.35)',
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={22} />
+              Download New Mobile App (APK v1.0)
+            </a>
+            <div style={{ fontSize: '12px', color: '#059669', fontWeight: 600, marginTop: '8px' }}>
+              ✓ Newest Production APK File • Instant 1-Tap Direct Download
             </div>
-          )}
+          </div>
 
           {isInstalled && (
             <div style={{
@@ -168,21 +171,21 @@ export default function AppDownload() {
             </div>
           )}
 
-          {/* Quick Portal Access Buttons */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {/* Secondary Browser Portal Access Links (No confusing blue primary buttons) */}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-secondary"
               onClick={() => navigate('/login')}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px' }}
             >
-              Open Web Portal <ArrowRight size={16} />
+              Open Web Portal in Browser <ArrowRight size={14} />
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() => navigate('/activate')}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px' }}
             >
               Activate Account
             </button>
@@ -474,7 +477,7 @@ export default function AppDownload() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-          &copy; {new Date().getFullYear()} Jatta M Kommerce. All rights reserved.
+          &copy; {new Date().getFullYear()} JMK. All rights reserved.
         </div>
 
       </div>

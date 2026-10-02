@@ -89,6 +89,12 @@ server = app.listen(PORT, () => {
       logStartup('Database connected successfully');
       connection.release();
 
+      // Ensure required schema tables exist (self-healing tables)
+      const { runAutoMigrations } = require('./database/autoMigrate');
+      runAutoMigrations().catch(migErr => {
+        logStartup(`[AutoMigrate Warning] ${migErr.message}`);
+      });
+
       // Start proactive HR intelligence insight scheduler
       if (process.env.NODE_ENV !== 'test') {
         insightScheduler.startScheduler();

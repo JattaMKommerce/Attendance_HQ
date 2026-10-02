@@ -1,7 +1,8 @@
 # ==============================================================================
 # Apache Configuration for HRMS Single Page Application (SPA)
 # Compatible with cPanel, Apache 2.4+, LiteSpeed, and reverse proxy environments
-# ==============================================================================
+# Allow uploads up to 50MB for photos and documents
+LimitRequestBody 52428800
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -12,6 +13,9 @@
   RewriteCond %{REQUEST_FILENAME} -d [OR]
   RewriteCond %{REQUEST_FILENAME} -l
   RewriteRule ^ - [L]
+
+  # Route /uploads/... to /api/uploads/... so Passenger Node.js app serves static media
+  RewriteRule ^uploads/(.*)$ api/uploads/$1 [PT,L]
 
   # Pass through backend API endpoints & static uploads (never rewrite to index.html)
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]

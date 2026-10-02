@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingDown, Search, Plus, X, CheckCircle, Clock, Activity, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingDown, Search, Plus, X, CheckCircle, Clock, Activity, AlertCircle, ArrowLeft } from 'lucide-react';
 import { fetchLifecycleContext } from './lifecycleHelper';
+import EmployeePicker from '../../components/common/EmployeePicker';
 
-const INITIAL_PIP_DATA = [
-  { id: 'EMP002', name: 'Rahul Sharma', department: 'IT', designation: 'Software Engineer', type: 'PIP', period: 'Q3 2025', manager: 'Neha Gupta', status: 'In Progress', nextReview: '15 Oct 2025', progress: 65, rating: '3.2/5', targets: ['Reduce open bugs by 40%', 'Meet sprint deadlines', 'Improve documentation quality'] },
-  { id: 'EMP007', name: 'Priya Patel', department: 'Human Resources', designation: 'HR Executive', type: 'Performance Review', period: 'H1 2025', manager: 'Amit Verma', status: 'Completed', nextReview: '-', progress: 100, rating: '4.5/5', targets: ['Complete onboarding process audit', 'Reduce hiring turnaround by 15%'] },
-  { id: 'EMP011', name: 'Amit Kumar', department: 'Operations', designation: 'Operations Lead', type: 'Performance Review', period: 'Q3 2025', manager: 'Vikram Mehta', status: 'Pending', nextReview: '20 Oct 2025', progress: 40, rating: '3.6/5', targets: ['Improve vendor SLA compliance', 'Optimize warehouse logistics'] }
-];
+const INITIAL_PIP_DATA = [];
 
 export default function PerformancePIP() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [tableData, setTableData] = useState(INITIAL_PIP_DATA);
   const [selectedEmp, setSelectedEmp] = useState(null);
+  const [selectedEmployeeObj, setSelectedEmployeeObj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -51,59 +51,39 @@ export default function PerformancePIP() {
 
   const handleOpenModal = (type) => {
     setModalType(type);
-    const initialDept = departments.length > 0 ? departments[0] : 'IT';
-    const firstEmp = employees.find(e => e.department === initialDept) || employees[0];
-    
+    setSelectedEmployeeObj(null);
     setFormData({
-      department: initialDept,
-      employeeId: firstEmp ? firstEmp.id : '',
-      designation: firstEmp ? firstEmp.designation : '',
-      period: 'Q3 2025',
-      manager: 'Neha Gupta',
+      department: '',
+      employeeId: '',
+      designation: '',
+      period: 'Q3 2026',
+      manager: 'HR Reviewer',
       targets: type === 'PIP' ? 'Reduce error rate by 30%\nComplete weekly mentor checkpoints' : 'Exceed quarterly goals\nMentorship of junior team members'
     });
     setShowModal(true);
   };
 
-  const handleDepartmentChange = (dept) => {
-    const filteredEmps = employees.filter(e => e.department === dept);
-    const matchedEmp = filteredEmps[0] || employees[0];
-    setFormData(prev => ({
-      ...prev,
-      department: dept,
-      employeeId: matchedEmp ? matchedEmp.id : '',
-      designation: matchedEmp ? matchedEmp.designation : ''
-    }));
-  };
-
-  const handleEmployeeChange = (empId) => {
-    const emp = employees.find(e => e.id.toString() === empId.toString());
-    if (emp) {
-      setFormData(prev => ({
-        ...prev,
-        employeeId: emp.id,
-        designation: emp.designation,
-        department: emp.department || prev.department
-      }));
-    }
-  };
-
   const handleCreate = (e) => {
     e.preventDefault();
-    const emp = employees.find(e => e.id.toString() === formData.employeeId.toString());
-    const empName = emp ? emp.name : (formData.employeeId || 'Employee');
-    const empCode = emp?.employee_code || formData.employeeId || `EMP${Math.floor(100 + Math.random() * 900)}`;
+    if (!formData.employeeId && !selectedEmployeeObj) {
+      alert('Please select an employee first.');
+      return;
+    }
+
+    const emp = selectedEmployeeObj || employees.find(e => e.id.toString() === formData.employeeId.toString());
+    const empName = emp ? (emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.name) : 'Employee';
+    const empCode = emp?.employee_code || (emp ? `EMP${String(emp.id).padStart(3, '0')}` : 'EMP-001');
 
     const newRecord = {
       id: empCode,
       name: empName,
-      department: formData.department || emp?.department || 'Operations',
-      designation: formData.designation || 'Associate',
+      department: emp?.department_name || emp?.department || formData.department || 'Operations',
+      designation: emp?.designation_name || emp?.designation || formData.designation || 'Associate',
       type: modalType,
-      period: formData.period || 'Q3 2025',
+      period: formData.period || 'Q3 2026',
       manager: formData.manager || 'HR Reviewer',
       status: 'In Progress',
-      nextReview: '15 Oct 2025',
+      nextReview: '15 Oct 2026',
       progress: modalType === 'PIP' ? 20 : 50,
       rating: '3.5/5',
       targets: formData.targets.split('\n').filter(Boolean)
@@ -170,8 +150,16 @@ export default function PerformancePIP() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingDown size={24} color="#8b5cf6" /> Performance & PIP
           </h1>
@@ -298,47 +286,51 @@ export default function PerformancePIP() {
                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} color="#64748b" /></button>
             </div>
             
-            <form onSubmit={handleCreate} style={{ padding: '24px' }}>
+              <form onSubmit={handleCreate} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                 <div style={{ gridColumn: 'span 2' }}>
+                   <EmployeePicker
+                     label="Select Employee for Review / PIP *"
+                     required
+                     value={selectedEmployeeObj}
+                     onChange={(emp) => {
+                       setSelectedEmployeeObj(emp);
+                       if (emp) {
+                         setFormData({
+                           ...formData,
+                           employeeId: emp.id,
+                           department: emp.department_name || emp.department || '',
+                           designation: emp.designation_name || emp.designation || '',
+                           manager: emp.manager_name || 'HR Reviewer'
+                         });
+                       } else {
+                         setFormData({
+                           ...formData,
+                           employeeId: '',
+                           department: '',
+                           designation: ''
+                         });
+                       }
+                     }}
+                   />
+                 </div>
                  <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Department</label>
-                    <select 
-                      required 
+                    <input 
+                      type="text" 
+                      readOnly 
                       value={formData.department} 
-                      onChange={(e) => handleDepartmentChange(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                      placeholder="Auto-filled from employee"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569' }} 
+                    />
                  </div>
                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Employee</label>
-                    <select 
-                      required 
-                      value={formData.employeeId} 
-                      onChange={(e) => handleEmployeeChange(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                    >
-                      <option value="">Select Employee</option>
-                      {employees
-                        .filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase())
-                        .map(e => (
-                          <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>
-                      ))}
-                      {/* Fallback if none in selected dept */}
-                      {employees.filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase()).length === 0 &&
-                        employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)
-                      }
-                    </select>
-                 </div>
-                 <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Designation</label>
                     <input 
                       type="text" 
                       readOnly 
                       value={formData.designation} 
-                      placeholder="Auto-filled based on employee"
+                      placeholder="Auto-filled from employee"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569' }} 
                     />
                  </div>

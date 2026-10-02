@@ -22,7 +22,7 @@ const MySettings = () => {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header desktop-only">
         <div>
           <h1 className="page-title">Settings</h1>
         </div>

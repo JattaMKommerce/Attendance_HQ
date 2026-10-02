@@ -201,7 +201,7 @@ const ApplyLeave = () => {
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+      <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
           onClick={() => navigate('/app/employee/leave')}
           style={{

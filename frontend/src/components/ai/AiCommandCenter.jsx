@@ -425,33 +425,31 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
     <div className={`ai-command-center-wrap ${className}`}>
       {/* Header Banner */}
       <div className="ai-center-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="ai-header-left">
           <button
             type="button"
             className={`ai-drawer-toggle-btn ${isDrawerOpen ? 'active' : ''}`}
             onClick={() => setIsDrawerOpen(!isDrawerOpen)}
             title="Toggle conversation threads"
           >
-            <PanelLeft size={16} />
-            <span style={{ fontSize: '11.5px', fontWeight: 600 }}>Threads</span>
+            <PanelLeft size={15} />
+            <span className="ai-btn-text">Threads</span>
           </button>
 
           <div className="ai-bot-avatar">
-            <Sparkles size={18} />
+            <Sparkles size={16} />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>
-                {currentTitle}
-              </span>
-              <span className={`ai-mode-pill ${isAdmin ? 'ai-mode-admin' : 'ai-mode-employee'}`}>
-                {isAdmin ? 'ADMIN OPERATOR' : 'EMPLOYEE ASSISTANT'}
-              </span>
-            </div>
+          <div className="ai-header-title-box">
+            <span className="ai-header-title">
+              {activeView === 'insights' ? 'HR Insights & Alerts' : currentTitle}
+            </span>
+            <span className={`ai-mode-pill ${isAdmin ? 'ai-mode-admin' : 'ai-mode-employee'}`}>
+              {isAdmin ? 'ADMIN' : 'EMPLOYEE'}
+            </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="ai-header-right">
           <button 
             type="button" 
             className={`ai-drawer-toggle-btn ${activeView === 'insights' ? 'active' : ''}`}
@@ -459,7 +457,7 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
             onClick={() => setActiveView(activeView === 'insights' ? 'chat' : 'insights')}
           >
             <ShieldAlert size={14} className={unreadInsightsCount > 0 ? 'text-amber-500' : ''} />
-            <span style={{ fontSize: '11.5px', fontWeight: 600 }}>Insights</span>
+            <span className="ai-btn-text">{activeView === 'insights' ? 'Chat' : 'Insights'}</span>
             {unreadInsightsCount > 0 && (
               <span className="insights-header-badge">{unreadInsightsCount}</span>
             )}
@@ -475,7 +473,7 @@ export default function AiCommandCenter({ className = '', onActionComplete, onCl
             }}
           >
             <RotateCcw size={14} />
-            <span style={{ fontSize: '11.5px' }}>New Chat</span>
+            <span className="ai-btn-text">New Chat</span>
           </button>
           {onClose && (
             <button 

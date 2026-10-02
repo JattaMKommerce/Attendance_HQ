@@ -1,10 +1,12 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { EmployeeProvider } from './context/EmployeeContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Login from './pages/auth/Login';
 import ActivateAccount from './pages/auth/ActivateAccount';
+import Website from './pages/website/Website';
 import AppDownload from './pages/download/AppDownload';
 import AppShell from './components/layout/AppShell';
 import MobileEmployeeLayout from './components/layout/MobileEmployeeLayout';
@@ -23,6 +25,7 @@ import IdCardStandaloneView from './pages/employees/IdCardStandaloneView';
 import Attendance from './pages/attendance/Attendance';
 import Roster from './pages/attendance/Roster';
 import Leave from './pages/leave/Leave';
+import QrPunchLandingPage from './pages/attendance/QrPunchLandingPage';
 
 // Employee Portal
 import { 
@@ -130,17 +133,53 @@ const RootRedirect = () => {
   return <Navigate to="/app/dashboard" replace />;
 };
 
+const RootHomeRoute = () => {
+  const { user } = useContext(AuthContext);
+
+  // Check if running inside installed Mobile App (Capacitor Android/iOS, standalone PWA, localhost container)
+  const isApp = 
+    (typeof Capacitor !== 'undefined' && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform()) ||
+    (typeof window !== 'undefined' && typeof window.Capacitor !== 'undefined' && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+    (typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)) ||
+    (typeof window !== 'undefined' && window.location.protocol === 'capacitor:') ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost' && !window.location.port) ||
+    (typeof window !== 'undefined' && (window.location.search.includes('platform=app') || window.location.search.includes('app=true') || localStorage.getItem('jmk_app_mode') === 'true'));
+
+  // Inside the mobile app: NEVER show the marketing website, show authentication page or direct workspace
+  if (isApp) {
+    if (user) {
+      return <RootRedirect />;
+    }
+    return <Navigate to="/login" replace />;
+  }
+
+  // On standard web browser: show public product website
+  return <Website />;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      {/* Public Product & Company Website (only in browser; mobile app redirects directly to login) */}
+      <Route path="/" element={<RootHomeRoute />} />
+      <Route path="/website" element={<Website />} />
+
+      {/* Authentication & Onboarding Routes */}
+      <Route path="/login" element={<Login defaultMode="signin" />} />
+      <Route path="/signin" element={<Login defaultMode="signin" />} />
+      <Route path="/signup" element={<Login defaultMode="signup" />} />
+      <Route path="/register" element={<Login defaultMode="signup" />} />
+      <Route path="/auth" element={<Login />} />
       <Route path="/activate" element={<ActivateAccount />} />
       <Route path="/download" element={<AppDownload />} />
       <Route path="/install" element={<AppDownload />} />
+      <Route path="/qr/attendance" element={<QrPunchLandingPage />} />
+      <Route path="/qr" element={<QrPunchLandingPage />} />
+      <Route path="/attendance/punch" element={<QrPunchLandingPage />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       
-      {/* Root redirect based on role */}
-      <Route path="/" element={<RootRedirect />} />
+      {/* Direct Portal Root Redirect */}
+      <Route path="/portal" element={<RootRedirect />} />
 
       {/* Organization Routes */}
       <Route element={<ProtectedRoute allowedRoles={['ORG_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'PAYROLL_MANAGER', 'FINANCE']} />}>
@@ -218,10 +257,13 @@ const AppRoutes = () => {
   );
 };
 
+import UpdatePromptModal from './components/common/UpdatePromptModal';
+
 const App = () => {
   return (
     <AuthProvider>
       <Router>
+        <UpdatePromptModal />
         <AppRoutes />
       </Router>
     </AuthProvider>

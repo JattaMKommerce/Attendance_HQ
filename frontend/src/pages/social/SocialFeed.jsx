@@ -15,7 +15,8 @@ import {
   RefreshCw, 
   CheckCircle2, 
   AlertCircle,
-  Clock
+  Clock,
+  ArrowLeft
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { getFileUrl } from '../../services/api';
@@ -37,6 +38,7 @@ const SocialFeed = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedError, setFeedError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [activeMenuPostId, setActiveMenuPostId] = useState(null);
@@ -81,21 +83,34 @@ const SocialFeed = () => {
   // ── Load Feed ──────────────────────────────────────────────────────────────
   const loadPosts = async (pageNum = 1, isRefresh = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else if (pageNum === 1) setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else if (pageNum === 1 && posts.length === 0) {
+        setLoading(true);
+      }
+      setFeedError(null);
 
       const res = await socialApi.getPosts(pageNum, 10);
-      if (res.success) {
+      if (res.success && Array.isArray(res.data)) {
         if (pageNum === 1) {
           setPosts(res.data);
         } else {
-          setPosts(prev => [...prev, ...res.data]);
+          setPosts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newPosts = res.data.filter(p => !existingIds.has(p.id));
+            return [...prev, ...newPosts];
+          });
         }
-        setPage(res.pagination.page);
-        setHasMore(res.pagination.page < res.pagination.totalPages);
+        setPage(res.pagination?.page || 1);
+        setHasMore((res.pagination?.page || 1) < (res.pagination?.totalPages || 1));
+        if (isRefresh) {
+          showToast('Feed refreshed');
+        }
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to load social feed');
+      const msg = err.response?.data?.message || err.message || 'Failed to load social feed';
+      setFeedError(msg);
+      showToast(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -267,34 +282,84 @@ const SocialFeed = () => {
     }
   };
 
+  // ── Client-side Image Compression Helper (Fast, reliable uploads on mobile) ──
+  const compressImage = (file, maxWidth = 1600, maxHeight = 1600, quality = 0.85) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type || !file.type.startsWith('image/') || file.type.includes('svg') || file.type.includes('gif')) {
+        return resolve(file);
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return resolve(file);
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
   // ── File Upload & Camera Handling ──────────────────────────────────────────
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    try {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
 
-    const currentCount = selectedFiles.length;
-    const remainingSlots = 5 - currentCount;
+      const currentCount = selectedFiles.length;
+      const remainingSlots = 5 - currentCount;
 
-    if (remainingSlots <= 0) {
-      showToast('Maximum 5 images allowed per post');
-      return;
-    }
-
-    const validFiles = [];
-    const validPreviews = [];
-
-    for (const file of files.slice(0, remainingSlots)) {
-      if (file.size > 10 * 1024 * 1024) {
-        showToast(`"${file.name}" exceeds 10MB limit`);
-        continue;
+      if (remainingSlots <= 0) {
+        showToast('Maximum 5 images allowed per post');
+        return;
       }
-      validFiles.push(file);
-      validPreviews.push(URL.createObjectURL(file));
-    }
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
-    setFilePreviews(prev => [...prev, ...validPreviews]);
-    e.target.value = null; // reset input
+      const validFiles = [];
+      const validPreviews = [];
+
+      for (const file of files.slice(0, remainingSlots)) {
+        if (file.size > 50 * 1024 * 1024) {
+          showToast(`"${file.name}" exceeds 50MB limit`);
+          continue;
+        }
+        validFiles.push(file);
+        validPreviews.push(URL.createObjectURL(file));
+      }
+
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+      setFilePreviews(prev => [...prev, ...validPreviews]);
+    } finally {
+      if (e.target) e.target.value = null; // Always reset input so capturing another camera photo works
+    }
   };
 
   const handleRemovePreview = (index) => {
@@ -309,8 +374,8 @@ const SocialFeed = () => {
   // ── Create Post Submit ─────────────────────────────────────────────────────
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!postContent.trim()) {
-      showToast('Please write something before posting');
+    if (!postContent.trim() && selectedFiles.length === 0) {
+      showToast('Please add text or attach a photo before posting');
       return;
     }
 
@@ -320,14 +385,19 @@ const SocialFeed = () => {
       formData.append('content', postContent.trim());
       formData.append('post_type', selectedType);
 
-      selectedFiles.forEach(file => {
+      // Compress images client-side before sending (prevents 413 & slow mobile uploads)
+      const filesToUpload = await Promise.all(
+        selectedFiles.map(file => compressImage(file))
+      );
+
+      filesToUpload.forEach(file => {
         formData.append('media', file);
       });
 
       const res = await socialApi.createPost(formData);
-      if (res.success) {
-        // Prepend new post to top of feed
-        setPosts(prev => [res.data, ...prev]);
+      if (res.success && res.data) {
+        // Prepend new post to top of feed immediately
+        setPosts(prev => [res.data, ...prev.filter(p => p.id !== res.data.id)]);
         showToast('Your post has been published to JMK Social!');
         
         // Reset modal state
@@ -336,9 +406,22 @@ const SocialFeed = () => {
         setSelectedFiles([]);
         setFilePreviews([]);
         setShowCreateModal(false);
+
+        // Silent background sync with server: merge so newly posted item is NEVER wiped out
+        socialApi.getPosts(1, 10).then(freshRes => {
+          if (freshRes?.success && Array.isArray(freshRes.data)) {
+            setPosts(prev => {
+              const incomingIds = new Set(freshRes.data.map(p => p.id));
+              // Retain any locally prepended post created in the last 2 minutes if server hasn't listed it yet
+              const recentLocal = prev.filter(p => !incomingIds.has(p.id) && (Date.now() - new Date(p.created_at || Date.now()).getTime() < 120000));
+              return [...recentLocal, ...freshRes.data];
+            });
+          }
+        }).catch(() => {});
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create post');
+      console.error('Error creating post:', err);
+      showToast(err.response?.data?.message || err.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
     }
@@ -364,33 +447,36 @@ const SocialFeed = () => {
 
   return (
     <div className="social-feed-container">
-      {/* ── Feed Header ───────────────────────────────────────────── */}
-      <div className="social-header-card">
-        <div className="social-title-area">
-          <div className="social-logo-badge">
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <h1>JMK Social</h1>
-            <p>Share company moments, celebrate wins, and connect with your team</p>
-          </div>
+      {/* ── Feed Top Action Bar (Clean, uncluttered) ── */}
+      <div className="social-top-bar">
+        <div className="social-top-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            type="button" 
+            onClick={() => window.history.back()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 600 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={13} /> Back
+          </button>
+          <span className="social-feed-title">Company Moments</span>
         </div>
-
         <div className="social-header-actions">
           <button 
+            type="button"
             className="btn-icon-soft" 
             title="Refresh Feed"
             onClick={() => loadPosts(1, true)}
             disabled={refreshing}
+            style={{ cursor: refreshing ? 'not-allowed' : 'pointer' }}
           >
-            <RefreshCw size={17} className={refreshing ? 'spin' : ''} />
+            <RefreshCw size={16} className={refreshing ? 'spin' : ''} />
           </button>
 
           <button 
             className="btn-social-create" 
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus size={18} />
+            <Plus size={16} />
             <span>Create Post</span>
           </button>
         </div>
@@ -406,7 +492,7 @@ const SocialFeed = () => {
           />
         ) : (
           <div className="social-avatar-fallback">
-            {user?.first_name ? user.first_name[0].toUpperCase() : 'U'}
+            {(user?.first_name || user?.name || user?.email || 'U')[0].toUpperCase()}
           </div>
         )}
         <div className="social-compose-prompt">
@@ -416,6 +502,24 @@ const SocialFeed = () => {
           <ImageIcon size={18} color="#2563eb" />
         </button>
       </div>
+
+      {/* ── Error Banner (if feed loading encounters an issue) ───── */}
+      {feedError && (
+        <div className="social-error-banner">
+          <div className="social-error-text">
+            <AlertCircle size={18} />
+            <span>{feedError}</span>
+          </div>
+          <button 
+            type="button" 
+            className="btn-retry-soft" 
+            onClick={() => loadPosts(1, true)}
+            disabled={refreshing}
+          >
+            {refreshing ? 'Retrying...' : 'Retry'}
+          </button>
+        </div>
+      )}
 
       {/* ── Posts Stream ─────────────────────────────────────────── */}
       {loading ? (
@@ -475,26 +579,27 @@ const SocialFeed = () => {
                     />
                   ) : (
                     <div className="social-avatar-fallback">
-                      {post.first_name ? post.first_name[0].toUpperCase() : 'U'}
+                      {(post.first_name || post.author_name || post.employee_name || 'U')[0].toUpperCase()}
                     </div>
                   )}
 
                   <div className="social-author-meta">
                     <div className="social-author-name-row">
                       <span className="social-author-name">{post.first_name} {post.last_name}</span>
-                      <span className={`social-type-badge ${typeConfig.badgeClass}`}>
-                        <span>{typeConfig.emoji}</span>
-                        <span>{typeConfig.label}</span>
-                      </span>
+                      {typeConfig.id !== 'standard' && (
+                        <span className={`social-type-badge ${typeConfig.badgeClass}`}>
+                          <span>{typeConfig.emoji}</span>
+                          <span>{typeConfig.label}</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="social-author-sub">
-                      {post.designation_name && <span>{post.designation_name}</span>}
-                      {post.designation_name && post.department_name && <span>•</span>}
-                      {post.department_name && <span>{post.department_name}</span>}
-                      <span>•</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                        <Clock size={11} />
+                      <span className="social-author-role">
+                        {post.designation_name || post.department_name || 'Team Member'}
+                      </span>
+                      <span className="social-bullet">•</span>
+                      <span className="social-time">
                         {formatTimeAgo(post.created_at)}
                       </span>
                     </div>
@@ -553,9 +658,11 @@ const SocialFeed = () => {
               </div>
 
               {/* Post Content */}
-              <div className="social-post-content">
-                {post.content}
-              </div>
+              {post.content && post.content.trim() && (
+                <div className="social-post-content">
+                  {post.content}
+                </div>
+              )}
 
               {/* Post Media Gallery */}
               {post.media && post.media.length > 0 && (
@@ -565,6 +672,16 @@ const SocialFeed = () => {
                       src={getFileUrl(post.media[0].media_url)} 
                       alt="Post media" 
                       className="social-media-single"
+                      loading="lazy"
+                      onError={(e) => {
+                        const curSrc = e.target.src;
+                        e.target.onerror = null;
+                        if (curSrc.includes('/api/uploads/')) {
+                          e.target.src = curSrc.replace('/api/uploads/', '/uploads/');
+                        } else if (curSrc.includes('/uploads/')) {
+                          e.target.src = curSrc.replace('/uploads/', '/api/uploads/');
+                        }
+                      }}
                       onClick={() => setLightboxImg(getFileUrl(post.media[0].media_url))}
                     />
                   ) : (
@@ -581,6 +698,16 @@ const SocialFeed = () => {
                               src={getFileUrl(m.media_url)} 
                               alt="Post media thumbnail" 
                               className="social-media-thumb" 
+                              loading="lazy"
+                              onError={(e) => {
+                                const curSrc = e.target.src;
+                                e.target.onerror = null;
+                                if (curSrc.includes('/api/uploads/')) {
+                                  e.target.src = curSrc.replace('/api/uploads/', '/uploads/');
+                                } else if (curSrc.includes('/uploads/')) {
+                                  e.target.src = curSrc.replace('/uploads/', '/api/uploads/');
+                                }
+                              }}
                             />
                             {isFourthWithMore && (
                               <div className="social-media-overlay-tag">
@@ -656,7 +783,7 @@ const SocialFeed = () => {
                                 />
                               ) : (
                                 <div className="social-comment-avatar-fallback">
-                                  {c.first_name ? c.first_name[0].toUpperCase() : 'U'}
+                                  {(c.first_name || c.author_name || 'U')[0].toUpperCase()}
                                 </div>
                               )}
 
@@ -752,7 +879,7 @@ const SocialFeed = () => {
                     />
                   ) : (
                     <div className="social-avatar-fallback">
-                      {user?.first_name ? user.first_name[0].toUpperCase() : 'U'}
+                      {(user?.first_name || user?.name || user?.email || 'U')[0].toUpperCase()}
                     </div>
                   )}
                   <div>
@@ -817,7 +944,7 @@ const SocialFeed = () => {
                     type="file" 
                     ref={fileInputRef} 
                     style={{ display: 'none' }} 
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept="image/*"
                     multiple
                     onChange={handleFileSelect}
                   />
@@ -866,7 +993,7 @@ const SocialFeed = () => {
                   <button 
                     type="submit" 
                     className="btn-social-create" 
-                    disabled={isSubmitting || !postContent.trim()}
+                    disabled={isSubmitting || (!postContent.trim() && selectedFiles.length === 0)}
                   >
                     {isSubmitting ? 'Publishing...' : 'Publish'}
                   </button>

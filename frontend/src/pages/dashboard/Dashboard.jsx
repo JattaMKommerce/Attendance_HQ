@@ -149,6 +149,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
+    // Auto-refresh every 2 minutes so employee check-ins reflect in real time
+    const interval = setInterval(() => fetchData(true), 120000);
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   // Derived Attendance & Punch Lists
@@ -166,7 +169,7 @@ const Dashboard = () => {
     // Attendance
     const presentToday = punchesList.length || attendanceData?.present || 0;
     const lateToday = lateArrivalsList.length || attendanceData?.late || 0;
-    const onLeaveCount = attendanceRecords.filter(r => r.status === 'leave').length || attendanceData?.onLeave || 6;
+    const onLeaveCount = attendanceRecords.filter(r => r.status === 'leave').length || (attendanceData?.onLeave || 0);
 
     const parseCount = (val) => {
       if (typeof val === 'number') return val;
@@ -182,11 +185,11 @@ const Dashboard = () => {
 
     const attendanceRate = totalEmployees > 0 
       ? Math.min(100, Math.round((presentToday / totalEmployees) * 100))
-      : 86;
+      : 0;
 
     return {
-      totalEmployees: totalEmployees || 49,
-      activeEmployees: activeEmployees || 48,
+      totalEmployees,
+      activeEmployees,
       presentToday,
       lateToday,
       onLeaveCount,

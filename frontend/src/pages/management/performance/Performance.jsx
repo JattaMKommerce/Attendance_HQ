@@ -1,12 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Download, TrendingUp, TrendingDown, 
   Target, ClipboardList, Clock, AlertTriangle, 
-  Star, Award, Code, BarChart2, Package, Megaphone, IndianRupee, Users, ChevronRight, BarChart
+  Star, Award, Code, BarChart2, Package, Megaphone, IndianRupee, Users, ChevronRight, BarChart, ArrowLeft
 } from 'lucide-react';
 import './Performance.css';
 
 const Performance = () => {
+  const navigate = useNavigate();
   // Mock Data
   const deptData = [
     { name: 'Engineering', employees: 124, compPct: 81, goalComp: '78%', rating: 4.2, trend: 9.3, icon: Code, color: '#8b5cf6', bg: '#ede9fe', barColor: '#10b981' },
@@ -27,9 +29,17 @@ const Performance = () => {
     <div className="perf-dashboard">
       
       {/* Header */}
-      <div className="perf-header">
-        <div>
-          <h1 className="perf-title">Performance</h1>
+      <div className="perf-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <h1 className="perf-title" style={{ margin: 0 }}>Performance</h1>
         </div>
         <div className="perf-header-actions">
           <div className="perf-date-picker">

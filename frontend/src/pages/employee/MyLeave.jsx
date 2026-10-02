@@ -23,6 +23,7 @@ const MyLeave = () => {
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [confirmId, setConfirmId] = useState(null); // For inline cancel confirmation
 
   const fetchLeaveData = async () => {
     try {
@@ -53,8 +54,7 @@ const MyLeave = () => {
   }, []);
 
   const handleCancelRequest = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this pending leave request?')) return;
-
+    setConfirmId(null);
     try {
       setError(null);
       const res = await employeePortalApi.cancelLeave(id);
@@ -71,56 +71,22 @@ const MyLeave = () => {
 
   return (
     <div className="page-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '16px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }}>
-            My Leave
-          </h1>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-            Manage your annual leave entitlements and requests
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            onClick={fetchLeaveData}
-            style={{
-              background: 'none',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              fontSize: '13px',
-              color: '#334155',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <RefreshCw size={14} className={loading ? 'spin' : ''} />
-            <span>Refresh</span>
-          </button>
-          <button 
-            onClick={() => navigate('/app/employee/leave/apply')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#2563eb',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
-            }}
-          >
-            <Plus size={16} />
-            <span>Apply Leave</span>
-          </button>
-        </div>
+      {/* Action Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '10px' }}>
+        <button
+          onClick={fetchLeaveData}
+          style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <RefreshCw size={14} />
+          <span>Refresh</span>
+        </button>
+        <button
+          onClick={() => navigate('/app/employee/leave/apply')}
+          style={{ padding: '8px 16px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+        >
+          <Plus size={16} />
+          <span>Apply Leave</span>
+        </button>
       </div>
 
       {/* Messages */}
@@ -168,11 +134,25 @@ const MyLeave = () => {
       )}
 
       {activeTab === 'requests' && (
-        <RequestsTab 
-          requests={leaveRequests} 
-          loading={loading} 
-          onCancel={handleCancelRequest}
+        <RequestsTab
+          requests={leaveRequests}
+          loading={loading}
+          onRequestCancel={(id) => setConfirmId(id)}
         />
+      )}
+
+      {/* Inline Cancel Confirmation Sheet */}
+      {confirmId && (
+        <div className="inline-confirm-overlay" onClick={() => setConfirmId(null)}>
+          <div className="inline-confirm-sheet" onClick={(e) => e.stopPropagation()}>
+            <p className="inline-confirm-title">Cancel Leave Request?</p>
+            <p className="inline-confirm-message">This leave request will be marked as cancelled and cannot be undone. Your leave balance will be restored.</p>
+            <div className="inline-confirm-actions">
+              <button className="inline-confirm-cancel" onClick={() => setConfirmId(null)}>Keep Request</button>
+              <button className="inline-confirm-danger" onClick={() => handleCancelRequest(confirmId)}>Yes, Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -287,7 +267,7 @@ const BalanceTab = ({ balance, loading }) => {
 };
 
 // Requests Tab
-const RequestsTab = ({ requests, loading, onCancel }) => {
+const RequestsTab = ({ requests, loading, onRequestCancel }) => {
   const [filter, setFilter] = useState('all');
 
   if (loading) {
@@ -346,7 +326,7 @@ const RequestsTab = ({ requests, loading, onCancel }) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filtered.map((req) => (
-            <RequestCard key={req.id} request={req} onCancel={onCancel} />
+            <RequestCard key={req.id} request={req} onCancel={onRequestCancel} />
           ))}
         </div>
       )}

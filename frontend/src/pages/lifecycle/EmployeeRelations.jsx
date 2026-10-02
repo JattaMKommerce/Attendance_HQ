@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Search, Plus, X, FileText, CheckCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, Search, Plus, X, FileText, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import { fetchLifecycleContext } from './lifecycleHelper';
+import EmployeePicker from '../../components/common/EmployeePicker';
 
-const INITIAL_RELATIONS_DATA = [
-  { id: 'EMP002', name: 'Rahul Sharma', department: 'IT', caseId: 'ER-2025-001', caseType: 'Policy Violation', reason: 'Repeated late login', date: '2025-09-12', status: 'Under Review', description: 'Employee has logged in late for 5 consecutive days without prior notification.', assignedTo: 'Anita Patel (HR Manager)' },
-  { id: 'EMP007', name: 'Priya Patel', department: 'Human Resources', caseId: 'ER-2025-002', caseType: 'Warning', reason: 'Unapproved leave', date: '2025-09-05', status: 'Issued', description: 'Absent on critical project sprint delivery date without taking approved leave.', assignedTo: 'Amit Verma (Director HR)' },
-  { id: 'EMP011', name: 'Amit Kumar', department: 'Operations', caseId: 'ER-2025-003', caseType: 'Investigation', reason: 'Misconduct', date: '2025-09-01', status: 'In Progress', description: 'Investigation initiated regarding conflict during warehouse inventory reconciliation.', assignedTo: 'Anita Patel (HR Manager)' },
-];
+const INITIAL_RELATIONS_DATA = [];
 
 export default function EmployeeRelations() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [tableData, setTableData] = useState(INITIAL_RELATIONS_DATA);
   const [selectedEmp, setSelectedEmp] = useState(null);
+  const [selectedEmployeeObj, setSelectedEmployeeObj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -28,7 +28,7 @@ export default function EmployeeRelations() {
     employeeId: '',
     caseType: 'Policy Violation',
     reason: '',
-    date: '2025-09-15',
+    date: new Date().toISOString().split('T')[0],
     assignedTo: 'Anita Patel (HR Manager)',
     description: ''
   });
@@ -49,12 +49,10 @@ export default function EmployeeRelations() {
   }, []);
 
   const handleOpenModal = () => {
-    const initialDept = departments[0] || 'IT';
-    const firstEmp = employees.find(e => e.department === initialDept) || employees[0];
-
+    setSelectedEmployeeObj(null);
     setFormData({
-      department: initialDept,
-      employeeId: firstEmp ? firstEmp.id : '',
+      department: '',
+      employeeId: '',
       caseType: 'Policy Violation',
       reason: 'Repeated non-adherence to office policy',
       date: new Date().toISOString().split('T')[0],
@@ -64,39 +62,39 @@ export default function EmployeeRelations() {
     setShowModal(true);
   };
 
-  const handleDepartmentChange = (dept) => {
-    const filteredEmps = employees.filter(e => e.department === dept);
-    const matchedEmp = filteredEmps[0] || employees[0];
-    setFormData(prev => ({
-      ...prev,
-      department: dept,
-      employeeId: matchedEmp ? matchedEmp.id : ''
-    }));
-  };
-
-  const handleEmployeeChange = (empId) => {
-    const emp = employees.find(e => e.id.toString() === empId.toString());
+  const handlePickerChange = (emp) => {
+    setSelectedEmployeeObj(emp);
     if (emp) {
       setFormData(prev => ({
         ...prev,
         employeeId: emp.id,
-        department: emp.department || prev.department
+        department: emp.department || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        employeeId: '',
+        department: ''
       }));
     }
   };
 
   const handleRecordCase = (e) => {
     e.preventDefault();
-    const emp = employees.find(e => e.id.toString() === formData.employeeId.toString());
-    const empName = emp ? emp.name : (formData.employeeId || 'Employee');
-    const empCode = emp?.employee_code || formData.employeeId || `EMP${Math.floor(100 + Math.random() * 900)}`;
+    if (!selectedEmployeeObj && !formData.employeeId) {
+      alert('Please select an active employee first.');
+      return;
+    }
+    const emp = selectedEmployeeObj;
+    const empName = emp ? emp.name : 'Employee';
+    const empCode = emp?.employee_code || `EMP${emp?.id || Math.floor(100 + Math.random() * 900)}`;
     const randomCaseNum = Math.floor(100 + Math.random() * 900);
 
     const newRecord = {
       id: empCode,
       name: empName,
-      department: formData.department || emp?.department || 'Operations',
-      caseId: `ER-2025-${randomCaseNum}`,
+      department: emp?.department || formData.department || 'Operations',
+      caseId: `ER-${new Date().getFullYear()}-${randomCaseNum}`,
       caseType: formData.caseType,
       reason: formData.reason,
       date: formData.date,
@@ -160,8 +158,16 @@ export default function EmployeeRelations() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertTriangle size={24} color="#ef4444" /> Employee Relations
           </h1>
@@ -277,36 +283,16 @@ export default function EmployeeRelations() {
             </div>
 
             <form onSubmit={handleRecordCase} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <EmployeePicker 
+                  label="Select Active Employee *" 
+                  required 
+                  value={selectedEmployeeObj} 
+                  onChange={handlePickerChange} 
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Department</label>
-                  <select 
-                    required 
-                    value={formData.department} 
-                    onChange={(e) => handleDepartmentChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Employee</label>
-                  <select 
-                    required 
-                    value={formData.employeeId} 
-                    onChange={(e) => handleEmployeeChange(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
-                  >
-                    <option value="">Select Employee</option>
-                    {employees
-                      .filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase())
-                      .map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)}
-                    {employees.filter(e => !formData.department || e.department?.toLowerCase() === formData.department.toLowerCase()).length === 0 &&
-                      employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_code || e.id})</option>)
-                    }
-                  </select>
-                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Case Type</label>
                   <select 

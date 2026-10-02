@@ -38,30 +38,16 @@ import {
   Megaphone,
 } from 'lucide-react';
 
-// ── Employee Portal Navigation ─────────────────────────────────────────────
+// ── Employee Portal Navigation (Streamlined) ─────────────────────────────
 export const employeeNavigation = [
   {
-    group: 'My Workspace',
+    group: 'Employee Portal',
     items: [
-      { label: 'Dashboard',        path: '/app/employee/dashboard',    icon: LayoutDashboard, roles: ['EMPLOYEE'] },
-      { label: 'JMK Social',       path: '/app/social',                icon: MessageSquare,   roles: ['EMPLOYEE'] },
-      { label: 'Stella AI',        path: '/app/employee/ai',           icon: Bot,             roles: ['EMPLOYEE'] },
-      { label: 'My Attendance',    path: '/app/employee/attendance',   icon: Clock,           roles: ['EMPLOYEE'] },
-      { label: 'My Leave',         path: '/app/employee/leave',        icon: Umbrella,        roles: ['EMPLOYEE'] },
-      { label: 'My Payslips',      path: '/app/employee/payslips',     icon: IndianRupee,      roles: ['EMPLOYEE'] },
-      { label: 'My Documents',     path: '/app/employee/documents',    icon: FileText,        roles: ['EMPLOYEE'] },
-      { label: 'Announcements',    path: '/app/employee/announcements',icon: Megaphone,       roles: ['EMPLOYEE'] },
-      { label: 'My Shift & Roster',path: '/app/employee/roster',       icon: CalendarDays,    roles: ['EMPLOYEE'] },
-      { label: 'Company Calendar', path: '/app/employee/calendar',     icon: Calendar,        roles: ['EMPLOYEE'] },
-    ],
-  },
-  {
-    group: 'My Information',
-    items: [
-      { label: 'My Profile',       path: '/app/employee/profile',      icon: User,            roles: ['EMPLOYEE'] },
-      { label: 'Directory',        path: '/app/employee/directory',    icon: Users,           roles: ['EMPLOYEE'] },
-      { label: 'Notifications',    path: '/app/employee/notifications',icon: Bell,            roles: ['EMPLOYEE'] },
-      { label: 'Settings',         path: '/app/employee/settings',     icon: Settings,        roles: ['EMPLOYEE'] },
+      { label: 'Attendance',    path: '/app/employee/attendance',   icon: Clock,         roles: ['EMPLOYEE'] },
+      { label: 'Stella AI',     path: '/app/employee/ai',           icon: Bot,           roles: ['EMPLOYEE'] },
+      { label: 'Social Page',   path: '/app/social',                icon: MessageSquare, roles: ['EMPLOYEE'] },
+      { label: 'Calendar',      path: '/app/employee/calendar',     icon: Calendar,      roles: ['EMPLOYEE'] },
+      { label: 'Apply Leave',   path: '/app/employee/leave/apply',  icon: Umbrella,      roles: ['EMPLOYEE'] },
     ],
   },
 ];

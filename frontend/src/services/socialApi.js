@@ -19,7 +19,7 @@ export const socialApi = {
   createPost: async (formData) => {
     const response = await api.post('/social/posts', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        'Content-Type': undefined
       }
     });
     return response.data;

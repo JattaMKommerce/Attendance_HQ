@@ -35,6 +35,26 @@ class SmartNluProvider extends AIProvider {
     });
 
     // ──────────────────────────────────────────────────────────────────────────
+    // 0. GREETINGS & STELLA INTRO
+    // ──────────────────────────────────────────────────────────────────────────
+    if (
+      lower === 'hi' ||
+      lower === 'hello' ||
+      lower === 'hey' ||
+      lower === 'greetings' ||
+      lower.startsWith('hi ') ||
+      lower.startsWith('hello ') ||
+      lower.startsWith('hey ') ||
+      lower === 'who are you' ||
+      lower === 'what can you do' ||
+      lower === 'help' ||
+      lower === 'what is your name' ||
+      lower.includes('how can you help')
+    ) {
+      return result('stella_greeting');
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // 1. EMPLOYEE CAPABILITIES (Self-Scoped)
     // ──────────────────────────────────────────────────────────────────────────
 

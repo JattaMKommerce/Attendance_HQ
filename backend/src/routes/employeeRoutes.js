@@ -7,9 +7,9 @@ const upload = require('../middleware/uploadMiddleware');
 router.use(authenticate);
 
 // File Uploads
-router.post('/upload-photo', authorizePermission('employee.create'), upload.single('photo'), employeeController.uploadPhoto);
-router.post('/upload-document', authorizePermission('employee.create'), upload.single('document'), employeeController.uploadDocument);
-router.post('/upload-resume', authorizePermission('employee.create'), upload.single('resume'), employeeController.uploadResume);
+router.post('/upload-photo', authorizePermission('employee.create'), upload.handleSingleUpload('photo'), employeeController.uploadPhoto);
+router.post('/upload-document', authorizePermission('employee.create'), upload.handleSingleUpload('document'), employeeController.uploadDocument);
+router.post('/upload-resume', authorizePermission('employee.create'), upload.handleSingleUpload('resume'), employeeController.uploadResume);
 
 // Get lookups for dropdowns (Departments, Designations, Managers)
 router.get('/lookups', authorizePermission('employee.view'), employeeController.getLookups);
@@ -22,5 +22,7 @@ router.post('/', authorizePermission('employee.create'), employeeController.crea
 router.post('/:id/resend-invite', authorizePermission('employee.create'), employeeController.resendInvitation);
 router.put('/:id', authorizePermission('employee.update'), employeeController.updateEmployee);
 router.patch('/:id/status', authorizePermission('employee.manage_status'), employeeController.updateEmployeeStatus);
+router.delete('/:id', authorizePermission('employee.delete'), employeeController.deleteEmployee);
+router.post('/admin-reset-test-data', employeeController.resetTestData);
 
 module.exports = router;

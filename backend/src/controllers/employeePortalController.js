@@ -125,7 +125,7 @@ class EmployeePortalController {
         return res.status(400).json({ success: false, message: 'Employee profile not linked' });
       }
       const { timestamp, location_lat, location_lng, source = 'mobile' } = req.body;
-      const logSource = ['web', 'mobile', 'biometric', 'manual'].includes(source) ? source : 'mobile';
+      const logSource = ['web', 'mobile', 'biometric', 'manual', 'qr', 'mobile_qr'].includes(source) ? source : 'mobile';
       const checkInTime = timestamp ? new Date(timestamp) : new Date();
       const date = checkInTime.toISOString().split('T')[0];
 
@@ -174,7 +174,7 @@ class EmployeePortalController {
         return res.status(400).json({ success: false, message: 'Employee profile not linked' });
       }
       const { timestamp, location_lat, location_lng, source = 'mobile' } = req.body;
-      const logSource = ['web', 'mobile', 'biometric', 'manual'].includes(source) ? source : 'mobile';
+      const logSource = ['web', 'mobile', 'biometric', 'manual', 'qr', 'mobile_qr'].includes(source) ? source : 'mobile';
       const checkOutTime = timestamp ? new Date(timestamp) : new Date();
       const date = checkOutTime.toISOString().split('T')[0];
 

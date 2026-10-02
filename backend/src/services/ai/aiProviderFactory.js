@@ -8,6 +8,7 @@
 const SmartNluProvider = require('./providers/smartNluProvider');
 const GeminiProvider = require('./providers/geminiProvider');
 const OpenAiProvider = require('./providers/openAiProvider');
+const GroqProvider = require('./providers/groqProvider');
 
 class ResilientProviderWrapper {
   constructor(primaryProvider, fallbackProvider) {
@@ -61,6 +62,11 @@ function getProvider() {
   }
 
   // Explicit provider selection
+  if (providerType === 'groq' && process.env.GROQ_API_KEY) {
+    const groq = new GroqProvider(process.env.GROQ_API_KEY, process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
+    return new ResilientProviderWrapper(groq, new SmartNluProvider());
+  }
+
   if (providerType === 'gemini' && process.env.GEMINI_API_KEY) {
     const gemini = new GeminiProvider(process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL || 'gemini-1.5-flash');
     return new ResilientProviderWrapper(gemini, new SmartNluProvider());
@@ -75,7 +81,12 @@ function getProvider() {
     return new SmartNluProvider();
   }
 
-  // Automatic detection based on available API keys
+  // Automatic detection based on available API keys (Groq prioritized for speed)
+  if (process.env.GROQ_API_KEY) {
+    const groq = new GroqProvider(process.env.GROQ_API_KEY, process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
+    return new ResilientProviderWrapper(groq, new SmartNluProvider());
+  }
+
   if (process.env.GEMINI_API_KEY) {
     const gemini = new GeminiProvider(process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL || 'gemini-1.5-flash');
     return new ResilientProviderWrapper(gemini, new SmartNluProvider());
@@ -86,8 +97,8 @@ function getProvider() {
     return new ResilientProviderWrapper(openai, new SmartNluProvider());
   }
 
-  // If no provider is configured, return null (triggers configuration error)
-  return null;
+  // Default to built-in SmartNluProvider so Stella AI is always available
+  return new SmartNluProvider();
 }
 
 module.exports = {

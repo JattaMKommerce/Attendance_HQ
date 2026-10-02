@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Monitor, Plus, Search, Filter, X, CheckCircle,
   Edit2, RotateCcw, Laptop, Smartphone, Car, Package,
-  Armchair, Printer as PrinterIcon, Wifi, HardDrive, AlertCircle
+  Armchair, Printer as PrinterIcon, Wifi, HardDrive, AlertCircle, ArrowLeft
 } from 'lucide-react';
+import EmployeePicker from '../../components/common/EmployeePicker';
 
 // ── Asset type config ──────────────────────────────────────────────────────
 const ASSET_TYPES = [
@@ -66,8 +68,28 @@ function Toast({ message, onClose }) {
 // ── AssetForm Modal ────────────────────────────────────────────────────────
 function AssetFormModal({ initial, onSave, onClose }) {
   const [form, setForm] = useState(initial || emptyForm);
+  const [selectedEmp, setSelectedEmp] = useState(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isEdit = !!initial?.id;
+
+  const handleEmployeeSelect = (emp) => {
+    setSelectedEmp(emp);
+    if (emp) {
+      setForm(f => ({
+        ...f,
+        employeeName: emp.name,
+        employeeId: emp.employee_code || emp.id,
+        department: emp.department || ''
+      }));
+    } else {
+      setForm(f => ({
+        ...f,
+        employeeName: '',
+        employeeId: '',
+        department: ''
+      }));
+    }
+  };
 
   const handleSave = () => {
     if (!form.assetName.trim()) { alert('Asset name is required.'); return; }
@@ -127,21 +149,23 @@ function AssetFormModal({ initial, onSave, onClose }) {
           {form.status === 'Assigned' && (
             <div style={{ background:'#f8fafc', border:'1px solid #e5e7eb', borderRadius:'8px', padding:'16px', display:'grid', gap:'12px' }}>
               <div style={{ fontSize:'13px', fontWeight:600, color:'#374151', display:'flex', alignItems:'center', gap:'6px' }}>
-                <Monitor size={14} /> Assigned To
+                <Monitor size={14} color="#2563eb" /> Assign to Active Employee *
               </div>
+              <EmployeePicker 
+                label="Search Employee by Name, Code, or Dept *" 
+                required 
+                value={selectedEmp || (form.employeeName ? { name: form.employeeName, employee_code: form.employeeId, department: form.department } : null)}
+                onChange={handleEmployeeSelect} 
+              />
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
                 <div>
-                  <label style={labelStyle}>Employee Name *</label>
-                  <input style={inputStyle} placeholder="Full name" value={form.employeeName} onChange={e => set('employeeName', e.target.value)} />
+                  <label style={labelStyle}>Employee ID</label>
+                  <input style={{ ...inputStyle, background: '#f1f5f9' }} readOnly placeholder="Auto-filled" value={form.employeeId} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Employee ID</label>
-                  <input style={inputStyle} placeholder="e.g. EMP001" value={form.employeeId} onChange={e => set('employeeId', e.target.value)} />
+                  <label style={labelStyle}>Department</label>
+                  <input style={{ ...inputStyle, background: '#f1f5f9' }} readOnly placeholder="Auto-filled" value={form.department} />
                 </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Department</label>
-                <input style={inputStyle} placeholder="e.g. Engineering" value={form.department} onChange={e => set('department', e.target.value)} />
               </div>
             </div>
           )}
@@ -183,6 +207,7 @@ function AssetFormModal({ initial, onSave, onClose }) {
 
 // ── Main Assets page ───────────────────────────────────────────────────────
 export default function Assets() {
+  const navigate = useNavigate();
   const [assets,       setAssets]       = useState(loadAssets);
   const [search,       setSearch]       = useState('');
   const [typeFilter,   setTypeFilter]   = useState('All');
@@ -308,9 +333,19 @@ export default function Assets() {
 
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'16px' }}>
-        <div>
-          <h1 style={{ margin:'0 0 4px', fontSize:'24px', fontWeight:800, color:'#0f172a' }}>Asset Management</h1>
-          <p style={{ margin:0, color:'#64748b', fontSize:'14px' }}>Track company assets — what's assigned to whom, when, and in what condition.</p>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)}
+            style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'#fff', border:'1px solid #cbd5e1', borderRadius:'6px', padding:'6px 12px', fontSize:'13px', cursor:'pointer', color:'#334155', fontWeight:500 }}
+            title="Go Back"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <div>
+            <h1 style={{ margin:'0 0 4px', fontSize:'24px', fontWeight:800, color:'#0f172a' }}>Asset Management</h1>
+            <p style={{ margin:0, color:'#64748b', fontSize:'14px' }}>Track company assets — what's assigned to whom, when, and in what condition.</p>
+          </div>
         </div>
         <button onClick={() => setShowModal(true)}
           style={{ padding:'10px 20px', background:'#2563eb', color:'#fff', border:'none', borderRadius:'8px', fontSize:'14px', fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
@@ -406,9 +441,24 @@ export default function Assets() {
                     </td>
                     <td style={{ padding:'12px 16px', color:'#374151' }}>{a.assetType}</td>
                     <td style={{ padding:'12px 16px' }}>
-                      {a.employeeName
-                        ? <div><div style={{ fontWeight:500, color:'#0f172a' }}>{a.employeeName}</div><div style={{ fontSize:'11px', color:'#9ca3af' }}>{a.employeeId || ''}</div></div>
-                        : <span style={{ color:'#9ca3af' }}>—</span>}
+                      {a.employeeName ? (
+                        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                          <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#dbeafe', color:'#1d4ed8', fontWeight:700, fontSize:'12px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:'1px solid #bfdbfe' }}>
+                            {a.employeeName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight:600, color:'#0f172a' }}>{a.employeeName}</div>
+                            <div style={{ fontSize:'11px', color:'#64748b' }}>
+                              <span style={{ fontWeight:500, color:'#2563eb' }}>{a.employeeId || 'Assigned'}</span>
+                              {a.department ? ` • ${a.department}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', color:'#64748b', fontSize:'12px', background:'#f1f5f9', padding:'3px 8px', borderRadius:'6px' }}>
+                          In Stock / Available
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding:'12px 16px', color:'#374151' }}>{a.department || '—'}</td>
                     <td style={{ padding:'12px 16px', color:'#374151', whiteSpace:'nowrap' }}>{fmtDate(a.dateIssued)}</td>
