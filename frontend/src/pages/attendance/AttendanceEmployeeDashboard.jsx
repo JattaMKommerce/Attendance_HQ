@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, ChevronLeft, ChevronRight, Clock, Umbrella, FileText, Mail, CheckSquare } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Clock, Umbrella, FileText, Mail, CheckSquare, Sparkles } from 'lucide-react';
 import { attendanceApi } from '../../services/attendanceApi';
 import { getEmployeeById } from '../../services/employeeApi';
+import { leaveApi } from '../../services/leaveApi';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import OfficialPayslipModal from '../../components/payroll/OfficialPayslipModal';
@@ -14,6 +15,7 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
   const [idCardUrl, setIdCardUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [historyData, setHistoryData] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   
   const today = new Date();
@@ -69,10 +71,16 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
   const fetchHistory = () => {
     setLoadingHistory(true);
     const monthStr = (currentMonth + 1).toString().padStart(2, '0');
-    attendanceApi.getEmployeeHistory(employee.id, { year: currentYear.toString(), month: monthStr })
-      .then(res => {
-        if (res.data?.success) {
-          setHistoryData(res.data.data);
+    Promise.all([
+      attendanceApi.getEmployeeHistory(employee.id, { year: currentYear.toString(), month: monthStr }),
+      leaveApi.getHolidays({ year: currentYear.toString() }).catch(() => ({ data: { data: [] } }))
+    ])
+      .then(([attRes, holRes]) => {
+        if (attRes.data?.success) {
+          setHistoryData(attRes.data.data);
+        }
+        if (holRes.data?.data) {
+          setHolidays(holRes.data.data);
         }
       })
       .catch(err => console.error(err))
@@ -157,13 +165,21 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
     const record = historyData.find(r => {
       if (!r.date) return false;
       const dbDate = new Date(r.date);
-      return dbDate.getFullYear() === currentYear && dbDate.getMonth() === currentMonth && dbDate.getDate() === i;
+      const rDateStr = typeof r.date === 'string' ? r.date.split('T')[0] : '';
+      return rDateStr === dateStr || (dbDate.getFullYear() === currentYear && dbDate.getMonth() === currentMonth && dbDate.getDate() === i);
+    });
+
+    const holidayMatch = holidays.find(h => {
+      if (!h.holiday_date) return false;
+      const hDateStr = typeof h.holiday_date === 'string' ? h.holiday_date.split('T')[0] : new Date(h.holiday_date).toISOString().split('T')[0];
+      return hDateStr === dateStr && (h.is_active === 1 || h.is_active === true || h.is_active === undefined);
     });
     
-    let status = record ? record.status : null;
+    let status = record ? record.status : (holidayMatch ? 'holiday' : null);
+    let holidayName = holidayMatch ? holidayMatch.name : (record?.holiday_name || null);
     let isToday = dDate.toDateString() === today.toDateString();
     
-    // Increment stats only if a record explicitly exists
+    // Increment stats only if a record explicitly exists or it is a holiday
     if (status === 'present') stats.present++;
     else if (status === 'late') { stats.present++; /* count late as present for total */ }
     else if (status === 'absent') stats.absent++;
@@ -172,19 +188,28 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
     else if (status === 'wfh') stats.wfh++;
     else if (status === 'holiday') stats.holiday++;
 
-    if (record) {
-       logsList.push({ ...record, dateObj: dDate, computedStatus: status });
+    if (record || holidayMatch) {
+       logsList.push({ 
+         id: record?.id || `hol-${i}`,
+         dateObj: dDate, 
+         computedStatus: status,
+         holiday_name: holidayName,
+         check_in_time: record?.check_in_time || null,
+         check_out_time: record?.check_out_time || null,
+         work_duration_minutes: record?.work_duration_minutes || 0
+       });
     }
 
     calendarDays.push({
       date: i,
       status: status,
+      holidayName: holidayName,
       isToday,
       key: `day-${i}`
     });
   }
 
-  const attendanceRate = daysInMonth > 0 ? ((stats.present / (daysInMonth - stats.holiday)) * 100).toFixed(1) : 0;
+  const attendanceRate = (daysInMonth - stats.holiday) > 0 ? ((stats.present / (daysInMonth - stats.holiday)) * 100).toFixed(1) : 0;
   // Make sure it doesn't exceed 100 or drop below 0 in weird edge cases
   const displayRate = isNaN(attendanceRate) || attendanceRate < 0 ? 0 : Math.min(attendanceRate, 100);
 
@@ -262,18 +287,72 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
           </div>
 
           <div className="calendar-widget">
-            <div className="calendar-header-row">
-              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            <div className="calendar-header-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontWeight: '700', fontSize: '12px', color: '#64748b', paddingBottom: '8px' }}>
+              <span style={{ color: '#ef4444' }}>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span style={{ color: '#64748b' }}>Sat</span>
             </div>
-            <div className="calendar-days-grid">
-              {calendarDays.map((day) => (
-                <div key={day.key} className={`calendar-day ${day.empty ? 'empty' : ''} ${day.isToday ? 'today' : ''}`}>
-                  {!day.empty && day.date}
-                  {!day.empty && day.status && (
-                    <div className={`calendar-dot dot-${day.status.replace('_', '-')}`}></div>
-                  )}
-                </div>
-              ))}
+            <div className="calendar-days-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+              {calendarDays.map((day) => {
+                const isHoliday = day.status === 'holiday';
+                const isPresent = day.status === 'present' || day.status === 'late';
+                const isAbsent = day.status === 'absent';
+                const isLeave = day.status === 'leave';
+
+                return (
+                  <div 
+                    key={day.key} 
+                    className={`calendar-day ${day.empty ? 'empty' : ''} ${day.isToday ? 'today' : ''} ${isHoliday ? 'day-holiday' : ''}`}
+                    title={day.holidayName ? `🎉 Holiday: ${day.holidayName}` : (day.status ? `Status: ${day.status}` : '')}
+                    style={{
+                      minHeight: '44px',
+                      padding: '4px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      backgroundColor: isHoliday ? '#f0fdfa' : isPresent ? '#f0fdf4' : isAbsent ? '#fef2f2' : isLeave ? '#faf5ff' : '#f8fafc',
+                      border: isHoliday ? '1.5px solid #5eead4' : day.isToday ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                      boxShadow: isHoliday ? '0 2px 5px rgba(13,148,136,0.15)' : 'none',
+                      cursor: 'default'
+                    }}
+                  >
+                    {!day.empty && (
+                      <span style={{
+                        fontSize: '12.5px',
+                        fontWeight: day.isToday || isHoliday ? '700' : '500',
+                        color: isHoliday ? '#0f766e' : day.isToday ? '#2563eb' : '#1e293b'
+                      }}>
+                        {day.date}
+                      </span>
+                    )}
+
+                    {!day.empty && isHoliday && day.holidayName && (
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        backgroundColor: '#ccfbf1',
+                        padding: '1px 3px',
+                        borderRadius: '3px',
+                        maxWidth: '90%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        marginTop: '2px'
+                      }}>
+                        {day.holidayName.split('(')[0].trim()}
+                      </span>
+                    )}
+
+                    {!day.empty && day.status && !isHoliday && (
+                      <div 
+                        className={`calendar-dot dot-${day.status.replace('_', '-')}`}
+                      ></div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -301,15 +380,15 @@ const AttendanceEmployeeDashboard = ({ employeeId, onBack }) => {
                     <tr key={log.id}>
                       <td style={{ paddingLeft: '12px', whiteSpace: 'nowrap' }}>{log.dateObj.getDate()} {monthNames[log.dateObj.getMonth()].slice(0, 3)} {log.dateObj.getFullYear()}</td>
                       <td>{log.dateObj.toLocaleString('default', { weekday: 'short' })}</td>
-                      <td>{log.check_in_time ? (() => { const parts = log.check_in_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : '—'}</td>
-                      <td>{log.check_out_time ? (() => { const parts = log.check_out_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : '—'}</td>
-                      <td>{log.work_duration_minutes ? `${Math.floor(log.work_duration_minutes/60)}h ${String(log.work_duration_minutes%60).padStart(2, '0')}m` : '—'}</td>
+                      <td>{log.check_in_time ? (() => { const parts = log.check_in_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : (log.computedStatus === 'holiday' ? '🎉 Holiday' : '—')}</td>
+                      <td>{log.check_out_time ? (() => { const parts = log.check_out_time.split(':'); const h = parseInt(parts[0]); const m = parts[1]; return `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`; })() : (log.computedStatus === 'holiday' ? 'Off' : '—')}</td>
+                      <td>{log.work_duration_minutes ? `${Math.floor(log.work_duration_minutes/60)}h ${String(log.work_duration_minutes%60).padStart(2, '0')}m` : (log.computedStatus === 'holiday' ? '0 hrs' : '—')}</td>
                       <td style={{ paddingRight: '12px' }}>
                         <span className={`status-pill active`} style={{ 
-                          background: log.computedStatus === 'present' ? '#d1fae5' : log.computedStatus === 'late' ? '#fef3c7' : log.computedStatus === 'holiday' ? '#f1f5f9' : '#fee2e2', 
-                          color: log.computedStatus === 'present' ? '#10b981' : log.computedStatus === 'late' ? '#d97706' : log.computedStatus === 'holiday' ? '#475569' : '#ef4444' 
+                          background: log.computedStatus === 'present' ? '#d1fae5' : log.computedStatus === 'late' ? '#fef3c7' : log.computedStatus === 'holiday' ? '#ccfbf1' : '#fee2e2', 
+                          color: log.computedStatus === 'present' ? '#10b981' : log.computedStatus === 'late' ? '#d97706' : log.computedStatus === 'holiday' ? '#0f766e' : '#ef4444' 
                         }}>
-                          {log.computedStatus ? log.computedStatus.charAt(0).toUpperCase() + log.computedStatus.slice(1) : '—'}
+                          {log.computedStatus === 'holiday' ? `🎉 ${log.holiday_name || 'Holiday'}` : (log.computedStatus ? log.computedStatus.charAt(0).toUpperCase() + log.computedStatus.slice(1) : '—')}
                         </span>
                       </td>
                     </tr>

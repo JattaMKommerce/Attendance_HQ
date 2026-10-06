@@ -155,9 +155,28 @@ class AttendanceService {
         a.work_duration_minutes, a.late_minutes, a.overtime_minutes
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
-      LEFT JOIN work_schedules ws ON e.id = ws.employee_id AND ? >= ws.effective_from AND (ws.effective_to IS NULL OR ? <= ws.effective_to)
+      LEFT JOIN (
+        SELECT ws1.employee_id, ws1.shift_id
+        FROM work_schedules ws1
+        INNER JOIN (
+          SELECT employee_id, MAX(id) as max_id 
+          FROM work_schedules 
+          WHERE ? >= effective_from AND (effective_to IS NULL OR ? <= effective_to)
+          GROUP BY employee_id
+        ) ws2 ON ws1.id = ws2.max_id
+      ) ws ON e.id = ws.employee_id
       LEFT JOIN shifts s ON ws.shift_id = s.id
-      LEFT JOIN attendance_records a ON e.id = a.employee_id AND a.date = ?
+      LEFT JOIN (
+        SELECT a1.id, a1.employee_id, a1.date, a1.status, a1.check_in_time, a1.check_out_time,
+               a1.work_duration_minutes, a1.late_minutes, a1.overtime_minutes
+        FROM attendance_records a1
+        INNER JOIN (
+          SELECT employee_id, MAX(id) as max_id
+          FROM attendance_records
+          WHERE date = ?
+          GROUP BY employee_id
+        ) a2 ON a1.id = a2.max_id
+      ) a ON e.id = a.employee_id
       WHERE e.organization_id = ? AND e.status = 'active'${aliasFilter.query}
       ORDER BY e.first_name ASC
     `;
@@ -215,6 +234,20 @@ class AttendanceService {
       };
     });
 
+    // Safeguard Deduplication: Ensure each employee appears strictly once in attendance records
+    const uniqueMap = new Map();
+    for (const r of finalRecords) {
+      if (!uniqueMap.has(r.employee_id)) {
+        uniqueMap.set(r.employee_id, r);
+      } else {
+        const existing = uniqueMap.get(r.employee_id);
+        if (!existing.id && r.id) {
+          uniqueMap.set(r.employee_id, r);
+        }
+      }
+    }
+    finalRecords = Array.from(uniqueMap.values());
+
     // Apply status filter post-processing since we compute strict status in JS
     if (filters.status && filters.status !== 'all') {
       if (filters.status === 'present') {
@@ -252,7 +285,21 @@ class AttendanceService {
     `;
     const [rows] = await db.execute(query, [organizationId, employeeId, year, month]);
 
-    return rows.map(r => {
+    // Fetch active holidays for the same month/year to merge into history
+    let holidayRows = [];
+    try {
+      const [hols] = await db.query(
+        `SELECT id, name, DATE_FORMAT(holiday_date, '%Y-%m-%d') as holiday_date, description, type
+         FROM holidays 
+         WHERE organization_id = ? AND is_active = TRUE AND YEAR(holiday_date) = ? AND MONTH(holiday_date) = ?`,
+        [organizationId, year, month]
+      );
+      holidayRows = hols;
+    } catch (hErr) {
+      console.warn('[AttendanceService] Could not fetch holidays for history:', hErr.message);
+    }
+
+    const records = rows.map(r => {
       let currentStatus = r.record_status || 'absent';
       
       // Strict late logic
@@ -270,7 +317,6 @@ class AttendanceService {
             } else {
               const timeParts = r.check_in_time.split(':');
               if (timeParts.length >= 2) {
-                // To handle potential "YYYY-MM-DD HH:mm:ss" vs "HH:mm:ss"
                 const hourStr = timeParts[0].includes(' ') ? timeParts[0].split(' ')[1] : timeParts[0];
                 hours = parseInt(hourStr, 10);
                 minutes = parseInt(timeParts[1], 10);
@@ -297,6 +343,31 @@ class AttendanceService {
         shift_name: r.shift_name || 'General (9 AM - 6 PM)'
       };
     });
+
+    // Merge scheduled holidays if not already marked in attendance records
+    for (const h of holidayRows) {
+      const alreadyHas = records.some(rec => {
+        const recDateStr = typeof rec.date === 'string' ? rec.date.split('T')[0] : new Date(rec.date).toISOString().split('T')[0];
+        return recDateStr === h.holiday_date;
+      });
+      if (!alreadyHas) {
+        records.push({
+          id: `holiday-${h.id}`,
+          date: h.holiday_date,
+          status: 'holiday',
+          holiday_name: h.name,
+          holiday_type: h.type,
+          check_in_time: null,
+          check_out_time: null,
+          work_duration_minutes: 0,
+          late_minutes: 0,
+          overtime_minutes: 0,
+          shift_name: 'Holiday'
+        });
+      }
+    }
+
+    return records;
   }
 
   async addManualRecord(organizationId, data) {

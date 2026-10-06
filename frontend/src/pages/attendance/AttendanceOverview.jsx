@@ -10,6 +10,7 @@ import api from '../../services/api';
 import AttendanceEmployeeDashboard from './AttendanceEmployeeDashboard';
 import AttendanceIssuesView from './AttendanceIssuesView';
 import OfficeQrModal from '../../components/attendance/OfficeQrModal';
+import LeaveHolidays from '../leave/LeaveHolidays';
 import './AttendanceDashboard.css';
 import './Attendance.css';
 
@@ -20,6 +21,7 @@ const AttendanceOverview = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewEmployeeId, setViewEmployeeId] = useState(null);
+  const [showHolidaysView, setShowHolidaysView] = useState(false);
 
   // Sync query parameters when redirected from specific notification
   useEffect(() => {
@@ -27,11 +29,13 @@ const AttendanceOverview = () => {
     const urlSearch = searchParams.get('search');
     const urlDate = searchParams.get('date');
     const urlEmpId = searchParams.get('employeeId');
+    const urlTab = searchParams.get('tab');
 
     if (urlStatus) setStatusFilter(urlStatus);
     if (urlSearch) setSearch(urlSearch);
     if (urlDate) setDate(urlDate);
     if (urlEmpId) setViewEmployeeId(Number(urlEmpId));
+    if (urlTab === 'holidays') setShowHolidaysView(true);
   }, [searchParams]);
   
   const [metrics, setMetrics] = useState({
@@ -179,6 +183,15 @@ const AttendanceOverview = () => {
     );
   }
 
+  // If Holiday Calendar view is opened
+  if (showHolidaysView) {
+    return (
+      <div className="attendance-dashboard">
+        <LeaveHolidays onBack={() => setShowHolidaysView(false)} />
+      </div>
+    );
+  }
+
   // If an issue is selected for review, show the full page AttendanceIssuesView
   if (activeModal) {
     return (
@@ -214,6 +227,28 @@ const AttendanceOverview = () => {
               className="att-date-input"
             />
           </div>
+          <button 
+            type="button"
+            className="att-qr-btn"
+            onClick={() => setShowHolidaysView(true)}
+            title="Manage and schedule Indian National & Festival Holidays"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #0d9488',
+              color: '#0f766e',
+              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '13.5px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            <Calendar size={16} color="#0d9488" />
+            <span>🇮🇳 Holiday Calendar</span>
+          </button>
           <button 
             type="button"
             className="att-qr-btn"

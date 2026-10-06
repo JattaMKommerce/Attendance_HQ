@@ -16,6 +16,7 @@ export const leaveApi = {
   // Holidays
   getHolidays: (params) => api.get('/leaves/holidays', { params }),
   createHoliday: (data) => api.post('/leaves/holidays', data),
+  seedIndianHolidays: (year) => api.post('/leaves/holidays/seed-indian', { year }),
   updateHoliday: (id, data) => api.put(`/leaves/holidays/${id}`, data),
   deleteHoliday: (id) => api.delete(`/leaves/holidays/${id}`),
   

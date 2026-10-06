@@ -16,7 +16,7 @@ class PayrollController {
         LEFT JOIN departments d ON e.department_id = d.id
         LEFT JOIN designations deg ON e.designation_id = deg.id
         LEFT JOIN employee_salaries es ON u.id = es.user_id
-        WHERE u.organization_id = ? AND u.status = 'ACTIVE'
+        WHERE u.organization_id = ? AND u.status = 'active'
       `;
       const [salaries] = await db.query(query, [organizationId]);
       
@@ -111,7 +111,7 @@ class PayrollController {
         LEFT JOIN departments d ON e.department_id = d.id
         LEFT JOIN designations deg ON e.designation_id = deg.id
         LEFT JOIN employee_salaries es ON u.id = es.user_id
-        WHERE u.organization_id = ? AND u.status = 'ACTIVE'
+        WHERE u.organization_id = ? AND u.status = 'active'
       `;
       const [employees] = await db.query(query, [organizationId]);
 
@@ -129,19 +129,19 @@ class PayrollController {
       const targetMonthNum = monthIndex + 1;
 
       // 3. Fetch approved leaves for all employees for this month
+      // Note: leave_requests has employee_id only (no user_id column)
       const [leaveRows] = await db.query(`
-        SELECT employee_id, user_id, SUM(total_days) as total_leaves
-        FROM leave_requests
-        WHERE organization_id = ? 
-          AND status = 'approved'
-          AND MONTH(start_date) = ? AND YEAR(start_date) = ?
-        GROUP BY employee_id, user_id
+        SELECT lr.employee_id, SUM(lr.total_days) as total_leaves
+        FROM leave_requests lr
+        WHERE lr.organization_id = ? 
+          AND lr.status = 'approved'
+          AND MONTH(lr.start_date) = ? AND YEAR(lr.start_date) = ?
+        GROUP BY lr.employee_id
       `, [organizationId, targetMonthNum, year]);
 
       const leaveMap = {};
       leaveRows.forEach(l => {
         if (l.employee_id) leaveMap[`emp_${l.employee_id}`] = parseFloat(l.total_leaves) || 0;
-        if (l.user_id) leaveMap[`user_${l.user_id}`] = parseFloat(l.total_leaves) || 0;
       });
 
       // 4. Fetch absent marks from attendance_records for this month

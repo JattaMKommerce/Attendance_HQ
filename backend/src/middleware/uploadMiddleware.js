@@ -60,8 +60,8 @@ const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname || '').toLowerCase();
   const mime = (file.mimetype || '').toLowerCase();
 
-  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.jfif', '.svg', '.avif'];
-  const isImageMime = mime.startsWith('image/') || mime === 'application/octet-stream';
+  const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif', '.jfif', '.avif'];
+  const isImageMime = (mime.startsWith('image/') && mime !== 'image/svg+xml') || mime === 'application/octet-stream';
   const isImageExt = allowedImageExts.includes(ext);
 
   const allowedDocExts = [

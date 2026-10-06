@@ -44,7 +44,33 @@ const MyAttendance = () => {
       ]);
 
       if (historyRes.data?.success) {
-        setRecords(historyRes.data.data?.records || []);
+        const rawRecords = historyRes.data.data?.records || [];
+        const rawHolidays = historyRes.data.data?.holidays || [];
+        
+        // Merge holidays into records list for visible history display
+        const recordsMap = new Map();
+        rawRecords.forEach(r => {
+          const dStr = typeof r.date === 'string' ? r.date.split('T')[0] : r.date;
+          recordsMap.set(dStr, r);
+        });
+
+        rawHolidays.forEach(h => {
+          const dStr = typeof h.holiday_date === 'string' ? h.holiday_date.split('T')[0] : h.holiday_date;
+          if (!recordsMap.has(dStr)) {
+            recordsMap.set(dStr, {
+              id: `holiday-${h.id}`,
+              date: dStr,
+              status: 'holiday',
+              notes: `${h.name} (${h.type ? h.type.replace('_', ' ') : 'Holiday'})`,
+              check_in_time: null,
+              check_out_time: null,
+              work_duration_minutes: 0
+            });
+          }
+        });
+
+        const mergedRecords = Array.from(recordsMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
+        setRecords(mergedRecords);
         setSummary(historyRes.data.data?.summary || null);
       }
 
@@ -620,6 +646,7 @@ const SummaryTab = ({ summary, filters, setFilters }) => {
         <StatCard label="Absent Days" value={summary.absent} color="#dc2626" />
         <StatCard label="Half Days" value={summary.halfDay} color="#d97706" />
         <StatCard label="Late Arrivals" value={summary.late} color="#ea580c" />
+        <StatCard label="Public Holidays" value={summary.holidays || 0} color="#0d9488" />
         <StatCard label="Total Working Hours" value={`${summary.workingHours} hrs`} color="#2563eb" />
         <StatCard label="Daily Average" value={`${summary.averageHours} hrs`} color="#7c3aed" />
       </div>
@@ -687,7 +714,8 @@ const StatusBadge = ({ status }) => {
     wfh: { bg: '#e0e7ff', color: '#4f46e5', label: 'WFH' },
     half_day: { bg: '#fef3c7', color: '#d97706', label: 'Half Day' },
     absent: { bg: '#fee2e2', color: '#dc2626', label: 'Absent' },
-    leave: { bg: '#f1f5f9', color: '#64748b', label: 'On Leave' }
+    leave: { bg: '#f1f5f9', color: '#64748b', label: 'On Leave' },
+    holiday: { bg: '#ccfbf1', color: '#0f766e', label: 'Holiday' }
   };
 
   const style = config[s] || { bg: '#f1f5f9', color: '#64748b', label: s || 'Unknown' };

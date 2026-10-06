@@ -139,5 +139,56 @@ exports.createLeaveType = async (req, res, next) => {
 };
 
 exports.updateLeaveType = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'Not implemented' });
+  try {
+    const { id } = req.params;
+    const { name, description, colorCode, isPaid, requiresAttachment, yearlyAllowance, maxCarryForward, requireAttachmentAfterDays } = req.body;
+    const organizationId = req.user.organization_id;
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [existing] = await connection.query(
+        'SELECT id FROM leave_types WHERE id = ? AND organization_id = ?',
+        [id, organizationId]
+      );
+
+      if (existing.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ success: false, message: 'Leave type not found' });
+      }
+
+      await connection.query(
+        'UPDATE leave_types SET name = COALESCE(?, name), description = COALESCE(?, description), color_code = COALESCE(?, color_code), is_paid = COALESCE(?, is_paid), requires_attachment = COALESCE(?, requires_attachment) WHERE id = ? AND organization_id = ?',
+        [name, description, colorCode, isPaid, requiresAttachment, id, organizationId]
+      );
+
+      const [policy] = await connection.query(
+        'SELECT id FROM leave_policies WHERE leave_type_id = ? AND organization_id = ?',
+        [id, organizationId]
+      );
+
+      if (policy.length > 0) {
+        await connection.query(
+          'UPDATE leave_policies SET yearly_allowance = COALESCE(?, yearly_allowance), max_carry_forward = COALESCE(?, max_carry_forward), require_attachment_after_days = COALESCE(?, require_attachment_after_days) WHERE leave_type_id = ? AND organization_id = ?',
+          [yearlyAllowance, maxCarryForward, requireAttachmentAfterDays, id, organizationId]
+        );
+      } else {
+        await connection.query(
+          'INSERT INTO leave_policies (organization_id, leave_type_id, yearly_allowance, max_carry_forward, require_attachment_after_days) VALUES (?, ?, ?, ?, ?)',
+          [organizationId, id, yearlyAllowance || 0, maxCarryForward || 0, requireAttachmentAfterDays || null]
+        );
+      }
+
+      await connection.commit();
+      res.json({ success: true, message: 'Leave type updated successfully' });
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    next(error);
+  }
 };

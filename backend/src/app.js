@@ -168,8 +168,40 @@ const healthCheckHandler = async (req, res) => {
 app.get('/health', healthCheckHandler);
 app.get('/api/health', healthCheckHandler);
 
-// Clean test data endpoint for immediate one-click browser access
+// Clean test data endpoint — DEVELOPMENT/TEST only, requires SUPER_ADMIN authentication
 const cleanTestDataHandler = async (req, res) => {
+  // Strictly disallow in production
+  const env = (process.env.NODE_ENV || 'development').toLowerCase();
+  if (env === 'production') {
+    return res.status(403).json({ success: false, message: 'This endpoint is disabled in production.' });
+  }
+
+  // Require Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Authentication required to run test data cleanup.' });
+  }
+
+  // Verify token and require SUPER_ADMIN role
+  try {
+    const { verifyAccessToken } = require('./utils/tokenUtils');
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyAccessToken(token);
+    if (!decoded) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
+    }
+    const [roles] = await db.execute(
+      'SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?',
+      [decoded.id]
+    );
+    const roleNames = roles.map(r => r.name);
+    if (!roleNames.includes('SUPER_ADMIN')) {
+      return res.status(403).json({ success: false, message: 'SUPER_ADMIN role required for this operation.' });
+    }
+  } catch (authErr) {
+    return res.status(401).json({ success: false, message: 'Token verification failed.' });
+  }
+
   try {
     await db.query('SET FOREIGN_KEY_CHECKS = 0');
     await db.query('DELETE FROM employee_experiences');

@@ -33,6 +33,7 @@
   "devDependencies": {
     "concurrently": "^9.2.4",
     "mysql2": "^3.24.3",
+    "playwright": "^1.57.0",
     "wait-on": "^9.1.0"
   }
 }

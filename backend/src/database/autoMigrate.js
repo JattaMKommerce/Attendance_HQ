@@ -154,6 +154,88 @@ async function runAutoMigrations() {
     await db.query("ALTER TABLE documents MODIFY COLUMN document_type VARCHAR(100) DEFAULT 'other'");
   } catch (docTypeErr) {}
 
+  // Ensure holidays table has required type, location, is_active columns
+  try {
+    await db.query("ALTER TABLE holidays ADD COLUMN type VARCHAR(50) DEFAULT 'National'");
+  } catch (e) {}
+  try {
+    await db.query("ALTER TABLE holidays ADD COLUMN location VARCHAR(100) DEFAULT 'All'");
+  } catch (e) {}
+  try {
+    await db.query("ALTER TABLE holidays ADD COLUMN is_active TINYINT(1) DEFAULT 1");
+  } catch (e) {}
+
+  // Auto-seed Indian National & Festival Holidays for active organizations if not already present
+  try {
+    const [orgs] = await db.query("SELECT id FROM organizations");
+    const indianHolidays2026 = [
+      { name: 'Republic Day', date: '2026-01-26', type: 'National', desc: 'National Holiday celebrating Constitution of India' },
+      { name: 'Maha Shivratri', date: '2026-02-15', type: 'Festival', desc: 'Celebration of Lord Shiva' },
+      { name: 'Holi (Festival of Colors)', date: '2026-03-04', type: 'Festival', desc: 'Festival of Colors and Spring' },
+      { name: 'Id-ul-Fitr (Ramzan Eid)', date: '2026-03-20', type: 'Festival', desc: 'Islamic festival marking end of Ramadan' },
+      { name: 'Mahavir Jayanti', date: '2026-03-31', type: 'Gazetted', desc: 'Birth anniversary of Lord Mahavira' },
+      { name: 'Good Friday', date: '2026-04-03', type: 'Gazetted', desc: 'Christian holiday commemorating the crucifixion of Jesus' },
+      { name: 'Dr. B.R. Ambedkar Jayanti', date: '2026-04-14', type: 'Gazetted', desc: 'Birth anniversary of Dr. B.R. Ambedkar' },
+      { name: 'May Day (Labour Day)', date: '2026-05-01', type: 'National', desc: 'International Workers Day' },
+      { name: 'Eid-ul-Adha (Bakrid)', date: '2026-05-27', type: 'Festival', desc: 'Feast of the Sacrifice' },
+      { name: 'Muharram', date: '2026-06-26', type: 'Gazetted', desc: 'First month of Islamic calendar' },
+      { name: 'Independence Day', date: '2026-08-15', type: 'National', desc: 'Indian Independence Day' },
+      { name: 'Milad-un-Nabi (Id-e-Milad)', date: '2026-08-26', type: 'Gazetted', desc: 'Birthday of Prophet Muhammad' },
+      { name: 'Ganesh Chaturthi', date: '2026-09-14', type: 'Festival', desc: 'Celebration of Lord Ganesha' },
+      { name: 'Mahatma Gandhi Jayanti', date: '2026-10-02', type: 'National', desc: 'Birth anniversary of Father of the Nation' },
+      { name: 'Dussehra (Vijay Dashami)', date: '2026-10-20', type: 'Festival', desc: 'Celebration of triumph of Good over Evil' },
+      { name: 'Diwali (Deepavali)', date: '2026-11-08', type: 'Festival', desc: 'Festival of Lights' },
+      { name: 'Govardhan Puja / Bhai Dooj', date: '2026-11-10', type: 'Festival', desc: 'Post-Diwali Festival' },
+      { name: 'Guru Nanak Jayanti', date: '2026-11-24', type: 'Gazetted', desc: 'Birth anniversary of Guru Nanak Dev Ji' },
+      { name: 'Christmas Day', date: '2026-12-25', type: 'Festival', desc: 'Celebration of the birth of Jesus Christ' }
+    ];
+
+    for (const org of orgs) {
+      for (const h of indianHolidays2026) {
+        const [exists] = await db.query(
+          "SELECT id FROM holidays WHERE organization_id = ? AND (holiday_date = ? OR name = ?)",
+          [org.id, h.date, h.name]
+        );
+        if (exists.length === 0) {
+          await db.query(
+            "INSERT INTO holidays (organization_id, name, holiday_date, type, location, description, is_active) VALUES (?, ?, ?, ?, 'All', ?, 1)",
+            [org.id, h.name, h.date, h.type, h.desc]
+          );
+        }
+      }
+
+      // Purge any historical duplicate rows for this organization
+      await db.query(`
+        DELETE h1 FROM holidays h1
+        INNER JOIN holidays h2 
+        WHERE h1.id > h2.id 
+          AND h1.organization_id = h2.organization_id 
+          AND h1.holiday_date = h2.holiday_date 
+          AND h1.name = h2.name
+      `);
+
+      // Purge duplicate employee rows if any exist in the database (keeps newest)
+      await db.query(`
+        DELETE e1 FROM employees e1
+        INNER JOIN employees e2 
+        WHERE e1.id < e2.id 
+          AND e1.organization_id = e2.organization_id 
+          AND e1.employee_code = e2.employee_code
+      `);
+
+      // Clean duplicate work_schedules
+      await db.query(`
+        DELETE ws1 FROM work_schedules ws1
+        INNER JOIN work_schedules ws2 
+        WHERE ws1.id < ws2.id 
+          AND ws1.employee_id = ws2.employee_id 
+          AND ws1.effective_from = ws2.effective_from
+      `);
+    }
+  } catch (holErr) {
+    console.warn('[AutoMigrate] Holiday/Employee seed note:', holErr.message);
+  }
+
   // Automatically provision official production admin (hrms@jattamkommerce.com) and purge developer personal accounts
   try {
     const adminEmail = 'hrms@jattamkommerce.com';
